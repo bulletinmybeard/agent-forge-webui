@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import ws from "../lib/ws";
 
 const fmtTokens = (n) => {
   if (!n || n <= 0) return "~";
@@ -27,6 +28,12 @@ export default function Sidebar({ collapsed, onToggle }) {
     fetchSessions();
     const interval = setInterval(fetchSessions, 30000);
     return () => clearInterval(interval);
+  }, [fetchSessions]);
+
+  useEffect(() => {
+    const onConnected = () => fetchSessions();
+    ws.on("connected", onConnected);
+    return () => ws.off("connected", onConnected);
   }, [fetchSessions]);
 
   const handleNewChat = () => {
