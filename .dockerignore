@@ -1,0 +1,29 @@
+# Dependencies & build output (rebuilt in the image)
+node_modules
+dist
+
+# Vite caches
+.vite
+*.timestamp-*.mjs
+
+# VCS & CI
+.git
+.github
+
+# Local deploy env (not needed for the build; *.example files don't match)
+*.env
+
+# Editor / local / OS
+.idea
+.vscode
+.DS_Store
+npm-debug.log*
+
+# Docker build files (not needed inside the image)
+Dockerfile
+docker-compose*.yml
+
+# Docs & helper scripts (not needed for the build)
+*.md
+LICENSE
+scripts

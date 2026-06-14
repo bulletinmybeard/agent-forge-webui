@@ -1,0 +1,36 @@
+# Local, single-host run of the AgentForge WebUI SPA — no Traefik, no remote. The
+# mirror of docker-compose.web.yml for running on this machine (e.g. a MacBook).
+#
+# Unlike the Traefik variant, this publishes the nginx container straight onto a
+# localhost port and points the proxied paths at a backend reachable from the
+# host (default the local AgentForge web app on :8200 via host.docker.internal).
+# Build context is THIS directory (the React client).
+#
+# Knobs come from deploy-web.local.env (optional) or the environment:
+#   WEB_PORT      — host port to publish the SPA on (default 8400)
+#   AGENT_BACKEND — backend nginx proxies /ws,/api,/uploads to
+#                   (default http://host.docker.internal:8200)
+#
+#   set -a; . ./deploy-web.local.env; set +a   # optional
+#   docker compose -f docker-compose.web.local.yml up -d --build
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agentforge-web-ui:local
+    container_name: agentforge-web-ui
+    ports:
+      - "${WEB_PORT:-8400}:80"
+    environment:
+      AGENT_BACKEND: "${AGENT_BACKEND:-http://host.docker.internal:8200}"
+      # Host header nginx sends upstream (+ SNI for https). deploy-web-local.sh
+      # derives it from AGENT_BACKEND ($host for local, the hostname for a remote
+      # vhost). The $$host default keeps same-origin behavior for a manual
+      # `docker compose -f docker-compose.web.local.yml up` without the script.
+      AGENT_BACKEND_HOST: "${AGENT_BACKEND_HOST:-$$host}"
+    # Lets the container reach a backend running on the host. Docker Desktop maps
+    # this automatically; the explicit mapping keeps it working on plain Linux.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

@@ -1,0 +1,100 @@
+# Serves the SPA and reverse-proxies the dynamic paths to the AgentForge
+# backend. ${AGENT_BACKEND} is substituted at container start (default
+# http://agentforge-web:8200.
+#
+# The browser only ever talks to this origin (agent-chat.<domain>); nginx
+# forwards /ws, /api, /uploads server-side, so there is no cross-origin/CORS
+# surface and the SPA's relative paths just work.
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# Honor the proto Traefik forwarded (https). $scheme here is the Traefik->nginx
+# hop (plain http on :80, TLS already terminated), so passing $scheme would tell
+# the backend "http" and break OAuth redirect_uri building. Fall back to $scheme
+# only for direct, non-proxied access where the header is absent.
+map $http_x_forwarded_proto $forwarded_proto {
+    default $http_x_forwarded_proto;
+    ''      $scheme;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Covers the upload POST (/api/upload/...) and any large payloads.
+    client_max_body_size 100m;
+
+    # Docker's embedded DNS. Using a variable in proxy_pass (below) forces nginx
+    # to re-resolve the backend at request time instead of caching the IP at
+    # worker start — so a backend redeploy (new container IP) doesn't strand the
+    # client on a stale IP and 502. ${AGENT_BACKEND} is a single env var, so the
+    # nginx-image envsubst step leaves $agent_backend (an nginx var) untouched.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $agent_backend "${AGENT_BACKEND}";
+
+    # Send SNI to the upstream for https backends (off by default in nginx). It's
+    # a no-op for the plain-http local/same-network backend. Pairs with the Host
+    # header in each location below: a remote vhost behind Host-routing (Traefik)
+    # needs BOTH its hostname in Host AND SNI, or it 404s / gets the wrong cert.
+    # ${AGENT_BACKEND_HOST} is "$host" for a same-origin backend (original
+    # behavior), the real hostname for a remote one (set by deploy-web-local.sh).
+    # proxy_ssl_name is pinned explicitly because proxy_pass uses a variable, so
+    # nginx's default SNI ($proxy_host) can't be derived at config time.
+    proxy_ssl_server_name on;
+    proxy_ssl_name ${AGENT_BACKEND_HOST};
+
+    # SPA — client-side routing falls back to index.html. Keep index.html itself
+    # uncached: it points at hash-fingerprinted /assets/ bundles, so a cached
+    # index.html strands the browser on an old build after a redeploy. no-cache =
+    # revalidate each load (cheap 304s); the /assets/ below keep 1y immutable cache.
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache";
+    }
+
+    # WebSocket chat — long-lived; disable buffering, allow long agent runs.
+    location /ws/ {
+        proxy_pass $agent_backend$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host ${AGENT_BACKEND_HOST};
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    # REST API — streamed responses, so buffering off.
+    location /api/ {
+        proxy_pass $agent_backend$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host ${AGENT_BACKEND_HOST};
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        proxy_buffering off;
+        proxy_read_timeout 600s;
+    }
+
+    # Uploaded files + upload endpoint.
+    location /uploads/ {
+        proxy_pass $agent_backend$request_uri;
+        proxy_set_header Host ${AGENT_BACKEND_HOST};
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+        client_max_body_size 100m;
+    }
+
+    # Static assets — long cache (Vite fingerprints filenames).
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}

@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Vite
+.vite/
+*.timestamp-*.mjs
+
+# Local deploy env (host config) — keep only deploy-web.local.env.example
+deploy-web.env
+deploy-web.local.env
+
+deploy-web.env.example
+deploy-web-remote.sh
+teardown-web-remote.sh
+docker-compose.web.yml
+
+# Vite local env overrides
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
