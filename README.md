@@ -1,6 +1,6 @@
 # AgentForge WebUI
 
-[![CI](https://github.com/bulletinmybeard/agent-forge-web-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/bulletinmybeard/agent-forge-web-ui/actions/workflows/ci.yml)
+[![CI](https://github.com/bulletinmybeard/agent-forge-webui/actions/workflows/ci.yml/badge.svg)](https://github.com/bulletinmybeard/agent-forge-webui/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Vite](https://img.shields.io/badge/Vite-8-646cff.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Biome](https://img.shields.io/badge/lint%2Fformat-Biome-60a5fa.svg?logo=biome&logoColor=white)](https://biomejs.dev/)

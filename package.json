@@ -1,14 +1,14 @@
 {
   "name": "agent-forge-webui",
   "version": "0.1.0",
-  "description": "AgentForge WebUI is a React SPA for AgentForge",
+  "description": "React SPA front-end for AgentForge — every mode, tool call, and connector in one chat UI",
   "type": "module",
   "license": "MIT",
   "author": "Robin Schulz",
-  "homepage": "https://github.com/bulletinmybeard/agent-forge-web-ui#readme",
+  "homepage": "https://github.com/bulletinmybeard/agent-forge-webui#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bulletinmybeard/agent-forge-web-ui.git"
+    "url": "git+https://github.com/bulletinmybeard/agent-forge-webui.git"
   },
   "scripts": {
     "dev": "vite",
