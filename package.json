@@ -1,6 +1,6 @@
 {
   "name": "agent-forge-webui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "React SPA front-end for AgentForge — every mode, tool call, and connector in one chat UI",
   "type": "module",
   "license": "MIT",

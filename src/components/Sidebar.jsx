@@ -18,7 +18,7 @@ export default function Sidebar({ collapsed, onToggle }) {
   const { sessionId: activeSessionId } = useParams();
 
   const fetchSessions = useCallback(() => {
-    fetch("/api/sessions?limit=100")
+    fetch("/api/sessions?limit=100&source=web")
       .then((r) => (r.ok ? r.json() : []))
       .then(setSessions)
       .catch(() => {});
