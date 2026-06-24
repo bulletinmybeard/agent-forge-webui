@@ -4,6 +4,8 @@ import ProviderSelector from "./ProviderSelector";
 
 const PROMPT_DRAFT_KEY = "agentforge:prompt-draft";
 
+const OFFLINE_GRACE_MS = 3000;
+
 const dragHasFiles = (e) => Array.from(e.dataTransfer?.types || []).includes("Files");
 
 const BLOCKED_UPLOAD_EXTS = new Set([
@@ -29,6 +31,7 @@ export default function ChatInput({
   onSend,
   disabled,
   running,
+  connected = true,
   onCancel,
   onOpenProfiles,
   onOpenMemory,
@@ -68,8 +71,21 @@ export default function ChatInput({
 }) {
   const [text, setText] = useState(() => localStorage.getItem(PROMPT_DRAFT_KEY) || "");
   const [helpOpen, setHelpOpen] = useState(false);
+  const [showOffline, setShowOffline] = useState(false);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (connected) {
+      setShowOffline(false);
+      return;
+    }
+    const t = setTimeout(() => setShowOffline(true), OFFLINE_GRACE_MS);
+    return () => clearTimeout(t);
+  }, [connected]);
+
+  const offline = showOffline;
+  const busyOrOffline = disabled || offline;
 
   useEffect(() => {
     if (text) localStorage.setItem(PROMPT_DRAFT_KEY, text);
@@ -129,7 +145,7 @@ export default function ChatInput({
   const remainingTokens = maxTokens - usedTokens;
   const wouldExceedContext = estimatedNewTokens > remainingTokens;
   const contextPercent = Math.min(((usedTokens + estimatedNewTokens) / maxTokens) * 100, 100);
-  const attachDisabled = disabled || atFileLimit || wouldExceedContext;
+  const attachDisabled = busyOrOffline || atFileLimit || wouldExceedContext;
 
   const autoResize = useCallback(() => {
     const el = inputRef.current;
@@ -141,7 +157,7 @@ export default function ChatInput({
   const handleSubmit = (e) => {
     e.preventDefault();
     const trimmed = text.trim();
-    if ((!trimmed && !hasFiles) || disabled || stillUploading) return;
+    if ((!trimmed && !hasFiles) || busyOrOffline || stillUploading) return;
     if (wouldExceedContext) {
       setAttachError(
         `Content too large for context window — estimated ${estimatedNewTokens.toLocaleString()} tokens but only ~${remainingTokens.toLocaleString()} remaining. Remove attachments or shorten your prompt.`,
@@ -583,7 +599,7 @@ export default function ChatInput({
                 modes={modes}
                 selected={selectedMode}
                 onChange={onModeChange}
-                disabled={disabled}
+                disabled={busyOrOffline}
               />
             )}
 
@@ -593,7 +609,7 @@ export default function ChatInput({
                 selected={selectedProvider}
                 onChange={onProviderChange}
                 locked={providerLocked}
-                disabled={disabled}
+                disabled={busyOrOffline}
               />
             )}
 
@@ -610,7 +626,7 @@ export default function ChatInput({
                   <select
                     onChange={handlePresetSelect}
                     defaultValue=""
-                    disabled={disabled}
+                    disabled={busyOrOffline}
                     title="Insert a saved prompt preset"
                     className="px-2 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm
                              rounded-lg hover:border-gray-600 focus:outline-none cursor-pointer
@@ -652,7 +668,7 @@ export default function ChatInput({
                 selected={selectedSkills}
                 onChange={onSkillsChange}
                 locked={skillsLocked}
-                disabled={disabled}
+                disabled={busyOrOffline}
                 activeMode={activeMode}
               />
             )}
@@ -664,7 +680,7 @@ export default function ChatInput({
                 type="button"
                 onClick={onToggleIncognito}
                 disabled={
-                  disabled ||
+                  busyOrOffline ||
                   noHistory ||
                   selectedMode === "monitor" ||
                   selectedMode === "scheduler" ||
@@ -709,12 +725,13 @@ export default function ChatInput({
               <button
                 type="button"
                 onClick={onToggleNotifications}
+                disabled={offline}
                 title={
                   notificationsEnabled
                     ? "Desktop notifications enabled — click to disable"
                     : "Enable desktop notifications when runs complete"
                 }
-                className={`p-2 rounded-lg transition-colors
+                className={`p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed
                            ${
                              notificationsEnabled
                                ? "text-amber-400 bg-amber-900/30 border border-amber-600/50 hover:bg-amber-900/50"
@@ -742,7 +759,7 @@ export default function ChatInput({
               <button
                 type="button"
                 onClick={onOpenProfiles}
-                disabled={disabled}
+                disabled={busyOrOffline}
                 title="Edit profile overrides"
                 className="p-2 text-gray-400 hover:text-gray-200 bg-gray-800 border border-gray-700
                            rounded-lg hover:border-gray-600 transition-colors
@@ -769,9 +786,11 @@ export default function ChatInput({
               <button
                 type="button"
                 onClick={onOpenMemory}
+                disabled={offline}
                 title="Memory — stored facts and recalled exchanges"
                 className="p-2 text-gray-400 hover:text-gray-200 bg-gray-800 border border-gray-700
-                           rounded-lg hover:border-gray-600 transition-colors"
+                           rounded-lg hover:border-gray-600 transition-colors
+                           disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -793,9 +812,11 @@ export default function ChatInput({
             <button
               type="button"
               onClick={() => onOpenConnectors?.()}
+              disabled={offline}
               title="Connectors — Gmail, Drive, and other services"
               className="p-2 text-gray-400 hover:text-gray-200 bg-gray-800 border border-gray-700
-                         rounded-lg hover:border-gray-600 transition-colors"
+                         rounded-lg hover:border-gray-600 transition-colors
+                         disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -816,9 +837,11 @@ export default function ChatInput({
             <button
               type="button"
               onClick={() => onOpenBookmarks?.()}
+              disabled={offline}
               title="Bookmarks — saved tool calls and answers"
               className="p-2 text-gray-400 hover:text-gray-200 bg-gray-800 border border-gray-700
-                         rounded-lg hover:border-gray-600 transition-colors"
+                         rounded-lg hover:border-gray-600 transition-colors
+                         disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -838,9 +861,11 @@ export default function ChatInput({
             <button
               type="button"
               onClick={() => setHelpOpen(true)}
+              disabled={offline}
               title="Cheat sheet — modes & tools"
               className="p-2 text-gray-400 hover:text-gray-200 bg-gray-800 border border-gray-700
-                         rounded-lg hover:border-gray-600 transition-colors"
+                         rounded-lg hover:border-gray-600 transition-colors
+                         disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -903,21 +928,23 @@ export default function ChatInput({
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               placeholder={
-                disabled
-                  ? "Agent is working..."
-                  : stillUploading
-                    ? "Uploading files..."
-                    : hasFiles
-                      ? `${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} attached — add a message...`
-                      : noHistory || selectedMode === "cloud" || selectedMode === "gitlab"
-                        ? "Private session — follow-ups work, cross-session history skipped..."
-                        : incognito
-                          ? "Private session — no history forwarded to the AI..."
-                          : selectedMode === "chat"
-                            ? "Ask the agent..."
-                            : `${modes.find((m) => m.id === selectedMode)?.label} mode — describe your task...`
+                offline
+                  ? "Disconnected — reconnecting to AgentForge…"
+                  : disabled
+                    ? "Agent is working..."
+                    : stillUploading
+                      ? "Uploading files..."
+                      : hasFiles
+                        ? `${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} attached — add a message...`
+                        : noHistory || selectedMode === "cloud" || selectedMode === "gitlab"
+                          ? "Private session — follow-ups work, cross-session history skipped..."
+                          : incognito
+                            ? "Private session — no history forwarded to the AI..."
+                            : selectedMode === "chat"
+                              ? "Ask the agent..."
+                              : `${modes.find((m) => m.id === selectedMode)?.label} mode — describe your task...`
               }
-              disabled={disabled}
+              disabled={busyOrOffline}
               autoFocus
               className={`flex-1 px-3 py-2 bg-gray-800 rounded-lg
                          text-gray-100 placeholder-gray-500
@@ -977,7 +1004,10 @@ export default function ChatInput({
               <button
                 type="submit"
                 disabled={
-                  disabled || stillUploading || wouldExceedContext || (!text.trim() && !hasFiles)
+                  busyOrOffline ||
+                  stillUploading ||
+                  wouldExceedContext ||
+                  (!text.trim() && !hasFiles)
                 }
                 title={wouldExceedContext ? "Content exceeds model context window" : undefined}
                 className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors
@@ -1004,9 +1034,19 @@ export default function ChatInput({
           <ContextBar
             contextUsage={contextUsage || { percent: 0, message_count: 0 }}
             onCompact={onCompactSession}
-            disabled={running}
+            disabled={busyOrOffline}
           />
         </div>
+
+        {offline && (
+          <div
+            className="mt-3 flex items-center gap-2 px-3 py-1.5 rounded-lg
+                       bg-red-950/40 border border-red-800/40 text-red-300 text-xs"
+          >
+            <span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+            <span className="flex-1">Not connected to AgentForge! Reconnecting…</span>
+          </div>
+        )}
       </div>
 
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />

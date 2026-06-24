@@ -32,11 +32,11 @@ class AgentWS {
    */
   _getUrl(sessionId) {
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    let url = `${proto}//${location.host}/ws/chat`;
+    const params = new URLSearchParams({ source: "web" });
     if (sessionId) {
-      url += `?session_id=${encodeURIComponent(sessionId)}`;
+      params.set("session_id", sessionId);
     }
-    return url;
+    return `${proto}//${location.host}/ws/chat?${params}`;
   }
 
   /**

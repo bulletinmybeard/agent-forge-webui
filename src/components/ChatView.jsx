@@ -60,6 +60,7 @@ const detectModeFromMessages = (messages, aliasToMode) => {
 
 export default function ChatView({
   messages,
+  connected = true,
   running,
   confirm,
   secret,
@@ -222,6 +223,7 @@ export default function ChatView({
     onSend: handleSend,
     disabled: running,
     running,
+    connected,
     onCancel,
     profiles,
     onOpenProfiles: () => setModalOpen(true),

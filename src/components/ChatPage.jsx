@@ -19,6 +19,7 @@ export default function ChatPage() {
       <KnowledgeBar />
       <ChatView
         messages={agent.messages}
+        connected={agent.connected}
         running={agent.running}
         confirm={agent.confirm}
         secret={agent.secret}
