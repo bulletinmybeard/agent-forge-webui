@@ -109,7 +109,7 @@ Defaults come from `deploy-web.local.env` (optional: copy `deploy-web.local.env.
   </tr>
 </table>
 
-More demo screenshots: [mode picker](.github/assets/agent-forge-web-ui-chat-mode-selector-popover.png) · [provider selector](.github/assets/agent-forge-web-ui-chat-llm-provider-selector-popover.png) · [skills](.github/assets/agent-forge-web-ui-chat-skills-popover.png) · [connectors](.github/assets/agent-forge-web-ui-connectors-modal.png) · [bookmarks](.github/assets/agent-forge-web-ui-bookmarks-modal.png) · [memory](.github/assets/agent-forge-web-ui-memory-modal.png) · [profile overrides](.github/assets/agent-forge-web-ui-model-profile-overrides-modal.png) · [attachments](.github/assets/agent-forge-web-ui-attachments.png) · [private session](.github/assets/agent-forge-web-ui-private-session.png) · [help](.github/assets/agent-forge-web-ui-agent-forge-help-modal.png)
+More demo screenshots: [mode picker](.github/assets/agent-forge-web-ui-chat-mode-selector-popover.png) · [provider selector](.github/assets/agent-forge-web-ui-chat-llm-provider-selector-popover.png) · [skills](.github/assets/agent-forge-web-ui-chat-skills-popover.png) · [connectors](.github/assets/agent-forge-web-ui-connectors-modal.png) · [bookmarks](.github/assets/agent-forge-web-ui-bookmarks-modal.png) · [memory](.github/assets/agent-forge-web-ui-memory-modal.png) · [profile overrides](.github/assets/agent-forge-web-ui-model-profile-overrides-modal.png) · [attachments](.github/assets/agent-forge-web-ui-attachments.png) · [private session](.github/assets/agent-forge-web-ui-private-session.png) · [help](.github/assets/agent-forge-web-ui-agent-forge-help-modal.png) · [command permissions](.github/assets/agent-forge-web-ui-command-permissions.png)
 
 ## License
 
