@@ -4,6 +4,25 @@ All notable changes to the **AgentForge WebUI** are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.2.0] - 2026-07-18
+
+Requires [AgentForge](https://github.com/bulletinmybeard/agent-forge) **≥ 0.12.0** for the command-permissions API (`/api/permissions/commands/*`).
+
+### Added
+
+- **Command Permissions** modal: manage shell/SSH policy (confirm / allowlist / denylist), pattern lists, dry-run command validate against draft form values, save/reset runtime overrides (global, all sessions)
+- Entry in the chat input menu tabs **Shell · local** / **SSH · remote** with context copy for each tool
+- `engines.node` ≥ 20.19.0 for Vite 8 / modern tooling
+- Better offline handling: disable prompt controls while AgentForge is unreachable and re-enable and refresh sessions on reconnect
+- Session list filtered by `source=web` so external clients stay out of the Agent Chat sidebar
+
+### Changed
+
+- Biome config for CLI 2.5.x (`preset`, schema, Tailwind CSS parser directives)
+- Node dependency updates and VS Code workspace tooling checked in
+
 ## [0.1.0] - 2026-06-14
 
 First release of the React SPA for [AgentForge](https://github.com/bulletinmybeard/agent-forge).
