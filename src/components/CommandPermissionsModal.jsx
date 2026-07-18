@@ -134,7 +134,9 @@ const ToolPanel = ({
           Runtime overrides apply immediately and persist until reset.
         </p>
         {hasOverride ? (
-          <span className="text-[9px] text-indigo-400 uppercase tracking-wide">Override active</span>
+          <span className="text-[9px] text-indigo-400 uppercase tracking-wide">
+            Override active
+          </span>
         ) : (
           <span className="text-[9px] text-gray-600 uppercase tracking-wide">YAML baseline</span>
         )}
@@ -196,7 +198,11 @@ const ToolPanel = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <PolicyPreview title={`YAML baseline (${tool.label})`} policy={baseline} hint="from config" />
+        <PolicyPreview
+          title={`YAML baseline (${tool.label})`}
+          policy={baseline}
+          hint="from config"
+        />
         <PolicyPreview
           title={`Effective policy (${tool.label})`}
           policy={effective}
@@ -365,7 +371,7 @@ export default function CommandPermissionsModal({ open, onClose }) {
                            activeTab === tool.id
                              ? "border-indigo-500 text-indigo-300"
                              : "border-transparent text-gray-500 hover:text-gray-300"
-                         }`}
+}`}
             >
               {tool.label}
               <span
@@ -410,7 +416,9 @@ export default function CommandPermissionsModal({ open, onClose }) {
                 validating={validating}
                 verdict={verdicts[activeTab]}
                 testCommand={testCommands[activeTab]}
-                onTestCommandChange={(v) => setTestCommands((prev) => ({ ...prev, [activeTab]: v }))}
+                onTestCommandChange={(v) =>
+                  setTestCommands((prev) => ({ ...prev, [activeTab]: v }))
+                }
               />
             </>
           )}

@@ -7,9 +7,9 @@ import BookmarksModal from "./BookmarksModal";
 import { CanvasPanel } from "./CanvasPanel";
 import { CanvasTab } from "./CanvasTab";
 import ChatInput from "./ChatInput";
+import CommandPermissionsModal from "./CommandPermissionsModal";
 import MemorySettings from "./MemorySettings";
 import MessageList from "./MessageList";
-import CommandPermissionsModal from "./CommandPermissionsModal";
 import ProfileModal from "./ProfileModal";
 
 const WelcomeGreeting = () => {
@@ -335,10 +335,7 @@ export default function ChatView({
 
       <ConnectorsModal open={connectorsOpen} onClose={() => setConnectorsOpen(false)} />
 
-      <CommandPermissionsModal
-        open={permissionsOpen}
-        onClose={() => setPermissionsOpen(false)}
-      />
+      <CommandPermissionsModal open={permissionsOpen} onClose={() => setPermissionsOpen(false)} />
 
       <BookmarksModal open={bookmarksOpen} onClose={() => setBookmarksOpen(false)} />
     </div>
