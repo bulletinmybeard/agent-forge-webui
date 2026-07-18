@@ -3,6 +3,9 @@
   "version": "0.2.0",
   "description": "React SPA front-end for AgentForge — every mode, tool call, and connector in one chat UI",
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "license": "MIT",
   "author": "Robin Schulz",
   "homepage": "https://github.com/bulletinmybeard/agent-forge-webui#readme",
@@ -27,17 +30,18 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.13.1",
+    "react-router-dom": "^7.18.1",
     "remark-gfm": "^4.0.1",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
-    "@tailwindcss/typography": "^0.5.19",
-    "@vitejs/plugin-react": "^6.0.2",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.19",
-    "vite": "^8.0.16"
+    "@biomejs/biome": "^2.5.3",
+    "@tailwindcss/postcss": "^4.3.2",
+    "@tailwindcss/typography": "^0.5.20",
+    "@vitejs/plugin-react": "^6.0.3",
+    "autoprefixer": "^10.5.2",
+    "postcss": "^8.5.16",
+    "tailwindcss": "^4.3.2",
+    "vite": "^8.1.4"
   }
 }

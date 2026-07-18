@@ -7,6 +7,7 @@ import BookmarksModal from "./BookmarksModal";
 import { CanvasPanel } from "./CanvasPanel";
 import { CanvasTab } from "./CanvasTab";
 import ChatInput from "./ChatInput";
+import CommandPermissionsModal from "./CommandPermissionsModal";
 import MemorySettings from "./MemorySettings";
 import MessageList from "./MessageList";
 import ProfileModal from "./ProfileModal";
@@ -191,6 +192,7 @@ export default function ChatView({
   const [modalOpen, setModalOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [connectorsOpen, setConnectorsOpen] = useState(false);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
 
   useEffect(() => {
@@ -229,6 +231,7 @@ export default function ChatView({
     onOpenProfiles: () => setModalOpen(true),
     onOpenMemory: () => setMemoryOpen(true),
     onOpenConnectors: () => setConnectorsOpen(true),
+    onOpenPermissions: () => setPermissionsOpen(true),
     onOpenBookmarks: () => setBookmarksOpen(true),
     pendingFiles,
     onFilesAttached,
@@ -331,6 +334,8 @@ export default function ChatView({
       <MemorySettings open={memoryOpen} onClose={() => setMemoryOpen(false)} />
 
       <ConnectorsModal open={connectorsOpen} onClose={() => setConnectorsOpen(false)} />
+
+      <CommandPermissionsModal open={permissionsOpen} onClose={() => setPermissionsOpen(false)} />
 
       <BookmarksModal open={bookmarksOpen} onClose={() => setBookmarksOpen(false)} />
     </div>

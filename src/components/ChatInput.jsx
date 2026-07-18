@@ -36,6 +36,7 @@ export default function ChatInput({
   onOpenProfiles,
   onOpenMemory,
   onOpenConnectors,
+  onOpenPermissions,
   onOpenBookmarks,
   pendingFiles = [],
   onFilesAttached,
@@ -833,6 +834,33 @@ export default function ChatInput({
                 <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
               </svg>
             </button>
+
+            {onOpenPermissions && (
+              <button
+                type="button"
+                onClick={onOpenPermissions}
+                disabled={offline}
+                title="Command Permissions — shell and SSH policy"
+                className="p-2 text-gray-400 hover:text-gray-200 bg-gray-800 border border-gray-700
+                           rounded-lg hover:border-gray-600 transition-colors
+                           disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="M9 12l2 2 4-4" />
+                </svg>
+              </button>
+            )}
 
             <button
               type="button"
