@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-19
+
+Requires [AgentForge](https://github.com/bulletinmybeard/agent-forge) **≥ 0.13.0** for command permission profiles (`/api/permissions/profiles/*`). Command-permissions overrides (`/api/permissions/commands/*`) remain as in 0.12.
+
+### Added
+
+- **Command permission profiles** in the Command Permissions modal: list/apply YAML baseline, blank slate, builtin (`tight` / `open`) and user-saved profiles; save current policy as a named profile; delete user profiles (`useCommandPermissions` + `/api/permissions/profiles`)
+
+### Fixed
+
+- Pattern/command list textareas: Enter no longer collapses multi-line editing (draft lines keep trailing empty rows; blanks are stripped only on save/compare/validate)
+
 ## [0.2.0] - 2026-07-18
 
 Requires [AgentForge](https://github.com/bulletinmybeard/agent-forge) **≥ 0.12.0** for the command-permissions API (`/api/permissions/commands/*`).

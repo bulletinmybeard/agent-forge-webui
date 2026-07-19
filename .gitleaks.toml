@@ -1,0 +1,5 @@
+# Gitleaks config for AgentForge WebUI
+title = "AgentForge WebUI"
+
+[extend]
+useDefault = true
