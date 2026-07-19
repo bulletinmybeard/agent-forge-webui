@@ -35,13 +35,13 @@
     "uuid": "^14.0.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.3",
-    "@tailwindcss/postcss": "^4.3.2",
+    "@biomejs/biome": "^2.5.4",
+    "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/typography": "^0.5.20",
     "@vitejs/plugin-react": "^6.0.3",
-    "autoprefixer": "^10.5.2",
-    "postcss": "^8.5.16",
+    "autoprefixer": "^10.5.4",
+    "postcss": "^8.5.20",
     "tailwindcss": "^4.3.2",
-    "vite": "^8.1.4"
+    "vite": "^8.1.5"
   }
 }
