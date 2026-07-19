@@ -49,10 +49,7 @@ const policyFromBundle = (bundle) => {
 
 const linesToArrayDraft = (text) => text.split("\n").map((s) => s.replace(/\s+$/, ""));
 
-const cleanList = (arr) =>
-  (arr || [])
-    .map((s) => String(s).trim())
-    .filter(Boolean);
+const cleanList = (arr) => (arr || []).map((s) => String(s).trim()).filter(Boolean);
 
 const sanitizePolicy = (policy) => ({
   mode: policy?.mode || "confirm",
@@ -538,7 +535,8 @@ export default function CommandPermissionsModal({ open, onClose }) {
                       YAML baseline (config){selectProfileValue === PRESET_YAML ? " · active" : ""}
                     </option>
                     <option value={PRESET_BLANK}>
-                      Blank slate (empty lists){selectProfileValue === PRESET_BLANK ? " · active" : ""}
+                      Blank slate (empty lists)
+                      {selectProfileValue === PRESET_BLANK ? " · active" : ""}
                     </option>
                     {profiles.map((p) => (
                       <option key={p.id} value={p.id}>
