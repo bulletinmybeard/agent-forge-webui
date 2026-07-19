@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Vite](https://img.shields.io/badge/Vite-8-646cff.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Biome](https://img.shields.io/badge/lint%2Fformat-Biome-60a5fa.svg?logo=biome&logoColor=white)](https://biomejs.dev/)
-[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.12.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.12.0)
+[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.13.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.13.0)
 
 > [!NOTE]
 > **Experimental!**
@@ -15,15 +15,15 @@ AgentForge WebUI is a React SPA for [AgentForge](https://github.com/bulletinmybe
 It's a pure frontend: it streams the agent's think > act > observe loop over the backend's `/ws/chat` WebSocket and calls its REST API for sessions, uploads, memory, and configs. It does nothing on its own — a running AgentForge backend is required!
 
 > [!IMPORTANT]
-> **Backend version:** WebUI **0.2.0+** needs [AgentForge **v0.12.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.12.0) or newer.
-> The **Command Permissions** modal and other features depend on APIs and schema shipped in that release (`/api/permissions/commands/*`, session `source` filtering, etc.). Older backends will fail those endpoints (e.g. 404).
+> **Backend version:** WebUI **0.3.0+** needs [AgentForge **v0.13.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.13.0) or newer.
+> The **Command Permissions** modal (overrides + **profiles**) depends on APIs and schema from that release (`/api/permissions/commands/*`, `/api/permissions/profiles/*`, session `source` filtering, etc.). Older backends will fail those endpoints (e.g. 404).
 
 ## Features
 
 - Streaming chat over the `/ws/chat` WebSocket, with the full think > act > observe event stream rendered live
 - Mode picker for the `@mode` prefixes (chat, docs, search, agent, sql, logs, discover, pipeline, review, research, coding, scheduler, monitor, connectors, and custom agents), each with its own colour
 - Per-event message cards: routing, config, tool calls, confirm + secret dialogs, results, summaries, errors, search metadata, discovery, research, scheduler/monitor jobs, file diffs, agent warning/recovery/retry/escalation, model fallback, and session compaction
-- **Command Permissions** modal: manage shell/SSH allowlist, denylist, and confirm policy (runtime overrides on the AgentForge backend)
+- **Command Permissions** modal: manage shell/SSH allowlist, denylist, and confirm policy (runtime overrides on the AgentForge backend), plus named **profiles** (YAML baseline, blank slate, builtins `tight`/`open`, save-as / delete user profiles)
 - Connectors UI: connect and manage multi-account Google (Gmail, Drive, BigQuery, YouTube), GitLab, and GitHub connections, with per-connection product/permission display and an in-place read/write toggle
 - Canvas workspace for pinned snippets, results, and queries
 - Bookmarks: save tool-call sets and agent answers from any run, fuzzy-searchable in a modal
@@ -38,7 +38,7 @@ It's a pure frontend: it streams the agent's think > act > observe loop over the
 Prerequisites:
 
 - **Node 20.19+** (`engines` in `package.json`)
-- A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.12.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.12.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
+- A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.13.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.13.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
 
 ```bash
 npm install

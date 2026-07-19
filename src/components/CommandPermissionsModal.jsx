@@ -47,19 +47,32 @@ const policyFromBundle = (bundle) => {
   return clonePolicy(src);
 };
 
-const linesToArray = (text) =>
-  text
-    .split("\n")
-    .map((s) => s.trim())
+const linesToArrayDraft = (text) => text.split("\n").map((s) => s.replace(/\s+$/, ""));
+
+const cleanList = (arr) =>
+  (arr || [])
+    .map((s) => String(s).trim())
     .filter(Boolean);
+
+const sanitizePolicy = (policy) => ({
+  mode: policy?.mode || "confirm",
+  allowed_commands: cleanList(policy?.allowed_commands),
+  allowed_patterns: cleanList(policy?.allowed_patterns),
+  blocked_patterns: cleanList(policy?.blocked_patterns),
+});
 
 const arrayToLines = (arr) => (arr || []).join("\n");
 
-const policiesEqual = (a, b) =>
-  a.mode === b.mode &&
-  JSON.stringify(a.allowed_commands) === JSON.stringify(b.allowed_commands) &&
-  JSON.stringify(a.allowed_patterns) === JSON.stringify(b.allowed_patterns) &&
-  JSON.stringify(a.blocked_patterns) === JSON.stringify(b.blocked_patterns);
+const policiesEqual = (a, b) => {
+  const x = sanitizePolicy(a);
+  const y = sanitizePolicy(b);
+  return (
+    x.mode === y.mode &&
+    JSON.stringify(x.allowed_commands) === JSON.stringify(y.allowed_commands) &&
+    JSON.stringify(x.allowed_patterns) === JSON.stringify(y.allowed_patterns) &&
+    JSON.stringify(x.blocked_patterns) === JSON.stringify(y.blocked_patterns)
+  );
+};
 
 const PolicyPreview = ({ title, policy, hint }) => (
   <div className="rounded-lg border border-gray-800 bg-gray-800/30 p-3">
@@ -120,7 +133,7 @@ const ToolPanel = ({
   };
 
   const handleListField = (field, text) => {
-    onChange({ ...local, [field]: linesToArray(text) });
+    onChange({ ...local, [field]: linesToArrayDraft(text) });
   };
 
   const hasOverride = bundle?.override != null;
@@ -243,8 +256,20 @@ const ToolPanel = ({
 };
 
 export default function CommandPermissionsModal({ open, onClose }) {
-  const { data, loading, error, saveOverrides, resetOverrides, validate, refresh } =
-    useCommandPermissions();
+  const {
+    data,
+    profiles,
+    activeProfileId,
+    loading,
+    error,
+    saveOverrides,
+    resetOverrides,
+    validate,
+    refresh,
+    applyProfile,
+    saveProfile,
+    deleteProfile,
+  } = useCommandPermissions();
 
   const [activeTab, setActiveTab] = useState("shell");
   const [local, setLocal] = useState({ shell: emptyPolicy(), ssh: emptyPolicy() });
@@ -254,6 +279,8 @@ export default function CommandPermissionsModal({ open, onClose }) {
   const [testCommands, setTestCommands] = useState({ shell: "", ssh: "" });
   const [verdicts, setVerdicts] = useState({ shell: null, ssh: null });
   const [validating, setValidating] = useState(false);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [saveAsName, setSaveAsName] = useState("");
 
   useEffect(() => {
     if (open) void refresh();
@@ -292,7 +319,10 @@ export default function CommandPermissionsModal({ open, onClose }) {
     setSaving(true);
     setSaveError(null);
     try {
-      await saveOverrides({ shell: local.shell, ssh: local.ssh });
+      await saveOverrides({
+        shell: sanitizePolicy(local.shell),
+        ssh: sanitizePolicy(local.ssh),
+      });
       onClose();
     } catch (e) {
       setSaveError(e.message);
@@ -320,7 +350,7 @@ export default function CommandPermissionsModal({ open, onClose }) {
     setValidating(true);
     setVerdicts((prev) => ({ ...prev, [activeTab]: null }));
     try {
-      const result = await validate(activeTab, cmd, local[activeTab]);
+      const result = await validate(activeTab, cmd, sanitizePolicy(local[activeTab]));
       setVerdicts((prev) => ({ ...prev, [activeTab]: result }));
     } catch (e) {
       setVerdicts((prev) => ({
@@ -329,6 +359,64 @@ export default function CommandPermissionsModal({ open, onClose }) {
       }));
     } finally {
       setValidating(false);
+    }
+  };
+
+  const PRESET_YAML = "__yaml__";
+  const PRESET_BLANK = "__blank__";
+
+  const handleApplyProfile = async (profileId) => {
+    setProfileBusy(true);
+    setSaveError(null);
+    try {
+      await applyProfile(profileId || PRESET_YAML);
+    } catch (e) {
+      setSaveError(e.message);
+    } finally {
+      setProfileBusy(false);
+    }
+  };
+
+  const selectProfileValue = useMemo(() => {
+    if (activeProfileId === PRESET_BLANK) return PRESET_BLANK;
+    if (activeProfileId && profiles.some((p) => p.id === activeProfileId)) {
+      return activeProfileId;
+    }
+    return PRESET_YAML;
+  }, [activeProfileId, profiles]);
+
+  const handleSaveAsProfile = async () => {
+    const id = saveAsName.trim();
+    if (!id) return;
+    setProfileBusy(true);
+    setSaveError(null);
+    try {
+      await saveOverrides({
+        shell: sanitizePolicy(local.shell),
+        ssh: sanitizePolicy(local.ssh),
+      });
+      await saveProfile(id, {
+        description: `Saved from UI ${new Date().toISOString().slice(0, 10)}`,
+        fromCurrent: true,
+      });
+      setSaveAsName("");
+    } catch (e) {
+      setSaveError(e.message);
+    } finally {
+      setProfileBusy(false);
+    }
+  };
+
+  const handleDeleteProfile = async (profileId) => {
+    if (!profileId) return;
+    setProfileBusy(true);
+    setSaveError(null);
+    try {
+      await deleteProfile(profileId);
+    } catch (e) {
+      setSaveError(e.message);
+    } finally {
+      setProfileBusy(false);
     }
   };
 
@@ -407,6 +495,99 @@ export default function CommandPermissionsModal({ open, onClose }) {
           {data && activeBundle && (
             <>
               <TabContext tool={activeTool} />
+
+              {/* Named profiles (Claude/Grok-style presets) */}
+              <div className="mb-4 rounded-lg border border-gray-800 bg-gray-800/20 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                    Profiles
+                  </span>
+                  {selectProfileValue === PRESET_YAML && (
+                    <span className="text-[10px] text-gray-500">active: YAML baseline</span>
+                  )}
+                  {selectProfileValue === PRESET_BLANK && (
+                    <span className="text-[10px] text-indigo-400">active: blank slate</span>
+                  )}
+                  {selectProfileValue !== PRESET_YAML &&
+                    selectProfileValue !== PRESET_BLANK &&
+                    activeProfileId && (
+                      <span className="text-[10px] text-indigo-400">
+                        active: <span className="font-mono">{activeProfileId}</span>
+                      </span>
+                    )}
+                </div>
+                <p className="text-[10px] text-gray-500 leading-relaxed">
+                  Apply a full shell/SSH preset.{" "}
+                  <span className="text-gray-400">YAML baseline</span> clears runtime overrides
+                  (config only). <span className="text-gray-400">Blank slate</span> starts empty
+                  lists for a new profile. Builtins:{" "}
+                  <span className="font-mono text-gray-400">tight</span> /{" "}
+                  <span className="font-mono text-gray-400">open</span>.
+                </p>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <select
+                    className="flex-1 min-w-[10rem] rounded-lg border border-gray-700 bg-gray-900 px-2 py-1.5
+                               text-xs text-gray-200 focus:outline-none focus:border-indigo-500"
+                    value={selectProfileValue}
+                    disabled={profileBusy}
+                    onChange={(e) => {
+                      void handleApplyProfile(e.target.value);
+                    }}
+                  >
+                    <option value={PRESET_YAML}>
+                      YAML baseline (config){selectProfileValue === PRESET_YAML ? " · active" : ""}
+                    </option>
+                    <option value={PRESET_BLANK}>
+                      Blank slate (empty lists){selectProfileValue === PRESET_BLANK ? " · active" : ""}
+                    </option>
+                    {profiles.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.id}
+                        {p.builtin ? " (builtin)" : " (user)"}
+                        {p.id === activeProfileId ? " · active" : ""}
+                        {p.description ? ` — ${p.description.slice(0, 40)}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={saveAsName}
+                    onChange={(e) => setSaveAsName(e.target.value)}
+                    placeholder="name for Save as…"
+                    className="w-36 rounded-lg border border-gray-700 bg-gray-900 px-2 py-1.5 text-xs
+                               text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveAsProfile()}
+                    disabled={profileBusy || !saveAsName.trim()}
+                    className="px-2.5 py-1.5 text-[11px] bg-gray-700 text-gray-200 rounded-lg
+                               hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Save as profile
+                  </button>
+                </div>
+                {profiles.some((p) => !p.builtin) && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {profiles
+                      .filter((p) => !p.builtin)
+                      .map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => void handleDeleteProfile(p.id)}
+                          disabled={profileBusy}
+                          className="text-[10px] px-2 py-0.5 rounded border border-gray-700 text-gray-500
+                                     hover:text-red-300 hover:border-red-800/50 disabled:opacity-40"
+                          title="Delete user profile"
+                        >
+                          delete {p.id}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+
               <ToolPanel
                 tool={activeTool}
                 bundle={activeBundle}
