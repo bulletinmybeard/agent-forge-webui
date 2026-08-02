@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Vite](https://img.shields.io/badge/Vite-8-646cff.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Biome](https://img.shields.io/badge/lint%2Fformat-Biome-60a5fa.svg?logo=biome&logoColor=white)](https://biomejs.dev/)
-[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.13.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.13.0)
+[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.14.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.14.0)
 
 > [!NOTE]
 > **Experimental!**
@@ -15,8 +15,8 @@ AgentForge WebUI is a React SPA for [AgentForge](https://github.com/bulletinmybe
 It's a pure frontend: it streams the agent's think > act > observe loop over the backend's `/ws/chat` WebSocket and calls its REST API for sessions, uploads, memory, and configs. It does nothing on its own — a running AgentForge backend is required!
 
 > [!IMPORTANT]
-> **Backend version:** WebUI **0.3.0+** needs [AgentForge **v0.13.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.13.0) or newer.
-> The **Command Permissions** modal (overrides + **profiles**) depends on APIs and schema from that release (`/api/permissions/commands/*`, `/api/permissions/profiles/*`, session `source` filtering, etc.). Older backends will fail those endpoints (e.g. 404).
+> **Backend version:** WebUI **0.4.0+** needs [AgentForge **v0.14.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.14.0) or newer.
+> **Recap** depends on `/api/sessions/{id}/recap` from that release. The **Command Permissions** modal (overrides + **profiles**) depends on APIs and schema from v0.13.0 (`/api/permissions/commands/*`, `/api/permissions/profiles/*`, session `source` filtering, etc.). Older backends will fail those endpoints (e.g., 404).
 
 ## Features
 
@@ -30,6 +30,7 @@ It's a pure frontend: it streams the agent's think > act > observe loop over the
 - Botty side panel for passive, in-context suggestions and full semantic-searchable chat session history
 - Session sidebar, status bar, knowledge bar, memory settings, profile and provider selectors, and a help modal
 - Context-usage bar with one-click session compaction at the critical threshold
+- **Recap**: idle-triggered running summary of the conversation in a muted block under the last answer, persisted so it survives reloads
 - Eager file uploads: paperclip, clipboard paste, or drag-and-drop with inline thumbnails. Unset attachments persist across reloads
 - GitHub-flavoured Markdown rendering and a Monaco-based inline prompt editor
 
@@ -38,7 +39,7 @@ It's a pure frontend: it streams the agent's think > act > observe loop over the
 Prerequisites:
 
 - **Node 20.19+** (`engines` in `package.json`)
-- A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.13.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.13.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
+- A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.14.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.14.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
 
 ```bash
 npm install

@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-02
+
+Requires [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[≥ 0.14.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.14.0)** for the recap endpoint (`POST /api/sessions/{id}/recap`).
+
+### Added
+
+- **Recap**: idle-triggered running summary under the last answer (`useRecap` + `RecapMessage`). After `RECAP_MESSAGE_THRESHOLD` complete user/assistant exchanges since the last recap (default **3**), waits `RECAP_IDLE_MS` of quiet (default **1 min**), then `POST`s the recap endpoint. Backend stores a volatile recap message so it survives reloads; plain text only (no Markdown)
+
 ## [0.3.0] - 2026-07-19
 
 Requires [AgentForge](https://github.com/bulletinmybeard/agent-forge) **≥ 0.13.0** for command permission profiles (`/api/permissions/profiles/*`). Command-permissions overrides (`/api/permissions/commands/*`) remain as in 0.12.

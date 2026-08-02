@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { v7 as uuidv7 } from "uuid";
 import ws from "../lib/ws";
+import useRecap from "./useRecap";
 
 export const useAgent = () => {
   const { sessionId: urlSessionId } = useParams();
@@ -1414,8 +1415,20 @@ export const useAgent = () => {
 
   const savedNoteTsSet = commandNotes.size > 0 ? new Set(commandNotes.keys()) : null;
 
+  const sessionId = sessionInfo.sessionId ?? urlSessionId ?? null;
+
+  const handleRecap = useCallback(
+    (text, data) => {
+      addMessage({ type: "recap", text, covered: data?.covered ?? null });
+    },
+    [addMessage],
+  );
+
+  useRecap({ sessionId, running, messages, confirm, secret, onRecap: handleRecap });
+
   return {
     connected,
+    sessionId,
     messages,
     running,
     confirm,
@@ -1575,6 +1588,14 @@ const restoreMessages = (dbMessages) => {
           type: "result",
           text: msg.content || meta.text || "",
           elapsed: meta.elapsed,
+          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+        });
+        break;
+
+      case "recap":
+        restored.push({
+          type: "recap",
+          text: msg.content || meta.text || "",
           _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
         });
         break;
