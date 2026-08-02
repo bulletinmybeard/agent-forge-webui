@@ -16,6 +16,7 @@ import FileDiffMessage from "./messages/FileDiffMessage";
 import ModelFallbackMessage from "./messages/ModelFallbackMessage";
 import MonitorJobMessage from "./messages/MonitorJobMessage";
 import QueryMessage from "./messages/QueryMessage";
+import RecapMessage from "./messages/RecapMessage";
 import ResearchPlanMessage from "./messages/ResearchPlanMessage";
 import ResultMessage from "./messages/ResultMessage";
 import RoutingMessage from "./messages/RoutingMessage";
@@ -38,6 +39,7 @@ const MESSAGE_COMPONENTS = {
   secret_answer: SecretDialog,
   result: ResultMessage,
   summary: SummaryMessage,
+  recap: RecapMessage,
   error: ErrorMessage,
   discovery_scope: DiscoveryScopeMessage,
   discovery_areas: DiscoveryAreaMessage,
