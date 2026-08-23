@@ -309,10 +309,7 @@ export default function ToolCallsPanel({ calls, _restored, _live, onSave, onRemo
               ({callCount} call{callCount !== 1 ? "s" : ""})
             </span>
           )}
-          <div
-            className="ml-auto flex items-center gap-2"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="ml-auto flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <CopyButton text={copyText} />
             <SaveButton isSaved={!!isSaved} onSave={onSave} onRemove={onRemove} />
           </div>

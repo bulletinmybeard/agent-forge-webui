@@ -17,8 +17,7 @@ const assert = (cond, msg) => {
 
 // Python regex in prose
 {
-  const src =
-    'content = re.sub(r"<think>(.*?)</think>\\s*", "", content, flags=re.DOTALL).strip()';
+  const src = 'content = re.sub(r"<think>(.*?)</think>\\s*", "", content, flags=re.DOTALL).strip()';
   const out = protectHtmlInMarkdown(src);
   assert(out.includes("&lt;think&gt;"), `prose regex must keep think open: ${out}`);
   assert(out.includes("(.*?)"), `capture group must survive: ${out}`);

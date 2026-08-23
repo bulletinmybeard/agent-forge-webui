@@ -86,15 +86,17 @@ export function protectHtmlInMarkdown(src) {
   const out = segments.map((seg) => {
     if (seg.type === "fence") return seg.value;
 
-    // Protect inline code, then escape HTML tags in remaining prose.
-    const inlines = [];
-    let text = seg.value.replace(/(`+)((?:(?!\1).|\n)*?)\1/g, (m) => {
-      const i = inlines.length;
-      inlines.push(m);
-      return `\u0000INLINE${i}\u0000`;
-    });
-    text = escapeHtmlTags(text);
-    text = text.replace(/\u0000INLINE(\d+)\u0000/g, (_, i) => inlines[Number(i)] || "");
+    // Escape HTML tags in prose only; leave inline `code` spans as-is.
+    const value = seg.value;
+    const inlineRe = /(`+)((?:(?!\1).|\n)*?)\1/g;
+    let last = 0;
+    let text = "";
+    for (const m of value.matchAll(inlineRe)) {
+      text += escapeHtmlTags(value.slice(last, m.index));
+      text += m[0];
+      last = m.index + m[0].length;
+    }
+    text += escapeHtmlTags(value.slice(last));
     return text;
   });
 
