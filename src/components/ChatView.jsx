@@ -40,6 +40,70 @@ const WelcomeGreeting = () => {
   );
 };
 
+// Per-session only — new chats must not inherit the previous mode/overrides.
+const MODE_PREFIX = "agentforge:mode:";
+const PROFILE_OVERRIDES_PREFIX = "agentforge:profile-overrides:";
+// Legacy global key (pre per-session mode draft) — cleared on write.
+const MODE_DRAFT_LEGACY_KEY = "agentforge:mode-draft";
+const PROFILE_OVERRIDES_PENDING_LEGACY = `${PROFILE_OVERRIDES_PREFIX}pending`;
+
+const readSessionMode = (sessionId) => {
+  if (!sessionId) return "chat";
+  try {
+    return localStorage.getItem(`${MODE_PREFIX}${sessionId}`) || "chat";
+  } catch {
+    return "chat";
+  }
+};
+
+const writeSessionMode = (sessionId, modeId) => {
+  if (!sessionId) return;
+  try {
+    // Drop legacy global draft so it cannot re-infect new chats
+    localStorage.removeItem(MODE_DRAFT_LEGACY_KEY);
+    const key = `${MODE_PREFIX}${sessionId}`;
+    if (modeId && modeId !== "chat") {
+      localStorage.setItem(key, modeId);
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    /* private mode / quota */
+  }
+};
+
+const profileOverridesKey = (sessionId) =>
+  sessionId ? `${PROFILE_OVERRIDES_PREFIX}${sessionId}` : null;
+
+const readProfileOverrides = (sessionId) => {
+  const key = profileOverridesKey(sessionId);
+  if (!key) return {};
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeProfileOverrides = (sessionId, overrides) => {
+  const key = profileOverridesKey(sessionId);
+  if (!key) return;
+  try {
+    // Drop legacy pending key so it cannot re-infect new chats
+    localStorage.removeItem(PROFILE_OVERRIDES_PENDING_LEGACY);
+    if (overrides && Object.keys(overrides).length > 0) {
+      localStorage.setItem(key, JSON.stringify(overrides));
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    /* private mode / quota */
+  }
+};
+
 const detectModeFromMessages = (messages, aliasToMode) => {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
@@ -140,25 +204,75 @@ export default function ChatView({
 
   const canvas = useCanvas({ sessionId, enabled: canvasEnabled });
   const [searchParams] = useSearchParams();
+  // Explicit ?mode= in the URL wins; otherwise null so session restore can apply.
   const urlMode = useMemo(() => {
     const param = searchParams.get("mode");
-    return param && validModeIds.has(param) ? param : "chat";
+    return param && validModeIds.has(param) ? param : null;
   }, [searchParams, validModeIds]);
 
-  const [selectedMode, setSelectedMode] = useState(urlMode);
+  // Always start at chat; session/url effects set the real value.
+  const [selectedMode, setSelectedMode] = useState("chat");
+  const selectedModeRef = useRef(selectedMode);
+  selectedModeRef.current = selectedMode;
+  const modeLoadedForRef = useRef(null);
+
+  // Per-session mode restore. New chat (no sessionId) → always "chat".
+  // When the first message assigns a session id, keep the mode the user
+  // already picked on the blank new-chat screen (don't snap back to chat).
   useEffect(() => {
-    setSelectedMode(urlMode);
+    const key = sessionId || "__new__";
+    if (modeLoadedForRef.current === key) return;
+    const prevKey = modeLoadedForRef.current;
+    modeLoadedForRef.current = key;
+
+    if (urlMode) {
+      setSelectedMode(urlMode);
+      return;
+    }
+    if (!sessionId) {
+      setSelectedMode("chat");
+      return;
+    }
+    if (prevKey === "__new__") {
+      writeSessionMode(sessionId, selectedModeRef.current);
+      return;
+    }
+    setSelectedMode(readSessionMode(sessionId));
+  }, [sessionId, urlMode]);
+
+  // URL mode always wins when present (including mid-session param changes).
+  useEffect(() => {
+    if (urlMode) setSelectedMode(urlMode);
   }, [urlMode]);
 
+  // Drop a stale mode id once the modes list is known (async load).
+  useEffect(() => {
+    if (urlMode) return;
+    if (validModeIds.size > 0 && !validModeIds.has(selectedMode)) {
+      setSelectedMode("chat");
+    }
+  }, [validModeIds, selectedMode, urlMode]);
+
+  // Persist mode only for an existing session (reload same chat keeps pick).
+  useEffect(() => {
+    if (!sessionId || urlMode) return;
+    writeSessionMode(sessionId, selectedMode);
+  }, [sessionId, selectedMode, urlMode]);
+
+  // Existing session with history: prefer mode inferred from last route.
   const modeRestoredForRef = useRef(null);
   useEffect(() => {
     if (searchParams.get("mode")) {
+      return;
+    }
+    if (!sessionId) {
       return;
     }
     if (modeRestoredForRef.current === sessionId) {
       return;
     }
     if (messages.length === 0) {
+      modeRestoredForRef.current = sessionId;
       return;
     }
 
@@ -189,14 +303,49 @@ export default function ChatView({
 
   const [profileData, setProfileData] = useState(null);
   const [profileOverrides, setProfileOverrides] = useState({});
+  const profileOverridesLoadedFor = useRef(null);
+  const skipProfileOverridesSave = useRef(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [connectorsOpen, setConnectorsOpen] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
 
+  // Restore profile overrides only for an existing session. New chat → {}.
   useEffect(() => {
-    fetch("/api/profiles")
+    const key = sessionId || "__new__";
+    if (profileOverridesLoadedFor.current === key) return;
+    profileOverridesLoadedFor.current = key;
+    skipProfileOverridesSave.current = true;
+
+    if (sessionId) {
+      setProfileOverrides(readProfileOverrides(sessionId));
+    } else {
+      try {
+        localStorage.removeItem(PROFILE_OVERRIDES_PENDING_LEGACY);
+      } catch {
+        /* ignore */
+      }
+      setProfileOverrides({});
+    }
+  }, [sessionId]);
+
+  // Persist after Apply / change so reload of *this* session keeps swaps.
+  // Skip the write that follows a load; never write without a session id.
+  useEffect(() => {
+    if (profileOverridesLoadedFor.current === null) return;
+    if (skipProfileOverridesSave.current) {
+      skipProfileOverridesSave.current = false;
+      return;
+    }
+    if (!sessionId) return;
+    writeProfileOverrides(sessionId, profileOverrides);
+  }, [sessionId, profileOverrides]);
+
+  useEffect(() => {
+    // include_abstract so the model dropdown also lists concrete cloud
+    // models (deepseek, nemotron, kimi-k3, …) that only exist as abstracts.
+    fetch("/api/profiles?include_abstract=true")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) setProfileData(data);
@@ -204,16 +353,25 @@ export default function ChatView({
       .catch(() => {});
   }, []);
 
-  const profiles = profileData?.profiles;
+  // Role profiles only in the modal list (default, agent, fast, …).
+  const profiles = useMemo(() => {
+    if (!profileData?.profiles) return null;
+    const out = {};
+    for (const [name, prof] of Object.entries(profileData.profiles)) {
+      if (!prof.abstract) out[name] = prof;
+    }
+    return out;
+  }, [profileData]);
 
+  // Model picker: every resolved model string, including abstracts.
   const allModels = useMemo(() => {
-    if (!profiles) return [];
+    if (!profileData?.profiles) return [];
     const seen = new Set();
-    Object.values(profiles).forEach(({ model }) => {
-      seen.add(model);
+    Object.values(profileData.profiles).forEach(({ model }) => {
+      if (model) seen.add(model);
     });
     return [...seen].sort();
-  }, [profiles]);
+  }, [profileData]);
 
   const handleSend = (text) => {
     const prefix = modePrefixes[selectedMode] || "";
@@ -289,7 +447,11 @@ export default function ChatView({
             onRerun={
               !running ? (query) => onSendQuery(query, [], "auto", profileOverrides) : undefined
             }
-            retryQuery={retryQuery}
+            retryQuery={
+              retryQuery
+                ? (promptText, editedText) => retryQuery(promptText, editedText, profileOverrides)
+                : undefined
+            }
             rerouteQuery={rerouteQuery}
             hasMoreMessages={hasMoreMessages}
             loadingMore={loadingMore}

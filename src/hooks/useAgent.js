@@ -1269,7 +1269,7 @@ export const useAgent = () => {
     ],
   );
 
-  const retryQuery = useCallback((promptText, editedText) => {
+  const retryQuery = useCallback((promptText, editedText, profileOverrides = {}) => {
     const currentSessionId = sessionIdRef.current;
     if (!currentSessionId || !promptText) return;
 
@@ -1286,8 +1286,18 @@ export const useAgent = () => {
       return prev.slice(0, cut);
     });
 
-    ws.retryQuery(currentSessionId, promptText, editedText);
-  }, []);
+    const overrides = {};
+    if (profileOverrides && Object.keys(profileOverrides).length > 0) {
+      overrides.profiles = profileOverrides;
+    }
+    if (incognito) overrides.incognito = true;
+    ws.retryQuery(
+      currentSessionId,
+      promptText,
+      editedText,
+      Object.keys(overrides).length > 0 ? overrides : undefined,
+    );
+  }, [incognito]);
 
   const rerouteQuery = useCallback(
     (originalText, originalMode, newMode) => {

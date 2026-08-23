@@ -1,8 +1,7 @@
 import { useCallback, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { formatElapsed } from "../../lib/formatTime";
 import CopyButton from "../CopyButton";
+import MarkdownContent from "../MarkdownContent";
 
 const makeFilename = (text, query) => {
   const toSlug = (s) =>
@@ -133,19 +132,6 @@ const stripWrappingFence = (text) => {
   return lines.slice(1, -1).join("\n").trim();
 };
 
-const markdownComponents = {
-  a: ({ href, children, ...props }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
-      {children}
-    </a>
-  ),
-  img: ({ src, alt, ...props }) => (
-    <a href={src} target="_blank" rel="noopener noreferrer" className="inline-block">
-      <img src={src} alt={alt || "Screenshot"} className="screenshot-thumb" {...props} />
-    </a>
-  ),
-};
-
 const StreamingCursor = () => {
   return (
     <span
@@ -234,10 +220,8 @@ export default function ResultMessage({
           )}
         </div>
       </div>
-      <div className="px-3 py-3 text-sm text-gray-200 markdown-content">
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-          {renderText}
-        </ReactMarkdown>
+      <div className="px-3 py-3 text-sm text-gray-200">
+        <MarkdownContent>{renderText}</MarkdownContent>
         {isStreaming && <StreamingCursor />}
       </div>
     </div>

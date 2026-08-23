@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Vite](https://img.shields.io/badge/Vite-8-646cff.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Biome](https://img.shields.io/badge/lint%2Fformat-Biome-60a5fa.svg?logo=biome&logoColor=white)](https://biomejs.dev/)
-[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.14.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.14.0)
+[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.15.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.15.0)
 
 > [!NOTE]
 > **Experimental!**
@@ -15,13 +15,13 @@ AgentForge WebUI is a React SPA for [AgentForge](https://github.com/bulletinmybe
 It's a pure frontend: it streams the agent's think > act > observe loop over the backend's `/ws/chat` WebSocket and calls its REST API for sessions, uploads, memory, and configs. It does nothing on its own — a running AgentForge backend is required!
 
 > [!IMPORTANT]
-> **Backend version:** WebUI **0.4.0+** needs [AgentForge **v0.14.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.14.0) or newer.
-> **Recap** depends on `/api/sessions/{id}/recap` from that release. The **Command Permissions** modal (overrides + **profiles**) depends on APIs and schema from v0.13.0 (`/api/permissions/commands/*`, `/api/permissions/profiles/*`, session `source` filtering, etc.). Older backends will fail those endpoints (e.g., 404).
+> **Backend version:** this WebUI needs [AgentForge **v0.15.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.15.0) or newer.
+> **`@trip` maps** (`/trips/{uuid}`), session `overrides.profiles`, and Memory Settings `schema_tool_available` come from that release. **Recap** (`/api/sessions/{id}/recap`) is from v0.14.0. The **Command Permissions** modal depends on v0.13.0 (`/api/permissions/commands/*`, `/api/permissions/profiles/*`, session `source` filtering). Older backends will fail those endpoints (e.g., 404).
 
 ## Features
 
 - Streaming chat over the `/ws/chat` WebSocket, with the full think > act > observe event stream rendered live
-- Mode picker for the `@mode` prefixes (chat, docs, search, agent, sql, logs, discover, pipeline, review, research, coding, scheduler, monitor, connectors, and custom agents), each with its own colour
+- Mode picker for the `@mode` prefixes (chat, docs, search, agent, sql, logs, discover, pipeline, review, research, coding, scheduler, monitor, connectors, and custom agents including `@trip`), each with its own colour. Mode and profile overrides are per-session; new chats start clean
 - Per-event message cards: routing, config, tool calls, confirm + secret dialogs, results, summaries, errors, search metadata, discovery, research, scheduler/monitor jobs, file diffs, agent warning/recovery/retry/escalation, model fallback, and session compaction
 - **Command Permissions** modal: manage shell/SSH allowlist, denylist, and confirm policy (runtime overrides on the AgentForge backend), plus named **profiles** (YAML baseline, blank slate, builtins `tight`/`open`, save-as / delete user profiles)
 - Connectors UI: connect and manage multi-account Google (Gmail, Drive, BigQuery, YouTube), GitLab, and GitHub connections, with per-connection product/permission display and an in-place read/write toggle
@@ -32,21 +32,22 @@ It's a pure frontend: it streams the agent's think > act > observe loop over the
 - Context-usage bar with one-click session compaction at the critical threshold
 - **Recap**: idle-triggered running summary of the conversation in a muted block under the last answer, persisted so it survives reloads
 - Eager file uploads: paperclip, clipboard paste, or drag-and-drop with inline thumbnails. Unset attachments persist across reloads
-- GitHub-flavoured Markdown rendering and a Monaco-based inline prompt editor
+- GitHub-flavoured Markdown rendering with fenced-code highlighting, and a Monaco-based inline prompt editor
+- Same-origin proxy for `@trip` maps (`/trips`) alongside `/ws`, `/api`, and `/uploads`
 
 ## Getting started
 
 Prerequisites:
 
 - **Node 20.19+** (`engines` in `package.json`)
-- A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.14.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.14.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
+- A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.15.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.15.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
 
 ```bash
 npm install
 npm run dev  # Vite dev server on http://localhost:5173
 ```
 
-The dev server proxies `/ws`, `/api`, and `/uploads` to the backend. The target defaults to `http://localhost:8200`; override it with `VITE_BACKEND_URL`:
+The dev server proxies `/ws`, `/api`, `/uploads`, and `/trips` to the backend. The target defaults to `http://localhost:8200`; override it with `VITE_BACKEND_URL`:
 
 ```bash
 VITE_BACKEND_URL=https://agent.remote npm run dev
@@ -61,7 +62,7 @@ npm run preview  # serve the build locally
 
 ## Run with Docker
 
-`scripts/deploy-web-local.sh` builds the SPA and runs it on this host as a standalone nginx container (`Dockerfile` + `docker-compose.web.local.yml`). It serves the static bundle and reverse-proxies `/ws`, `/api`, and `/uploads` to your AgentForge backend — nothing leaves the machine.
+`scripts/deploy-web-local.sh` builds the SPA and runs it on this host as a standalone nginx container (`Dockerfile` + `docker-compose.web.local.yml`). It serves the static bundle and reverse-proxies `/ws`, `/api`, `/uploads`, and `/trips` to your AgentForge backend — nothing leaves the machine.
 
 ```bash
 scripts/deploy-web-local.sh    # build + run, detached, on http://localhost:8400
@@ -72,7 +73,7 @@ It expects an AgentForge backend reachable at `http://host.docker.internal:8200`
 
 Flags:
 
-- `--dev` (alias `--hot`): skip the container and run the Vite dev server with hot reload on the same port, proxying `/ws` `/api` `/uploads` to the backend. The fast inner loop: no image, no rebuilds, instant reloads on save
+- `--dev` (alias `--hot`): skip the container and run the Vite dev server with hot reload on the same port, proxying `/ws` `/api` `/uploads` `/trips` to the backend. The fast inner loop: no image, no rebuilds, instant reloads on save
 - `--no-build`: recreate the container without rebuilding the image
 - `--no-cache`: force a clean image build (no Docker layer cache)
 - `--foreground`: run attached and stream logs instead of detaching
