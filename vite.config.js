@@ -87,6 +87,11 @@ export default defineConfig({
         changeOrigin: true,
         configure: hardenProxy,
       },
+      "/trips": {
+        target: backendUrl,
+        changeOrigin: true,
+        configure: hardenProxy,
+      },
     },
   },
 });

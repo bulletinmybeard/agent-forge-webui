@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-23
+
+Needs the matching [AgentForge](https://github.com/bulletinmybeard/agent-forge) **Unreleased** tree for `/trips` maps, session `overrides.profiles`, and `GET /api/memory/schemas` `schema_tool_available`. Recap still needs AgentForge **≥ 0.14.0**.
+
+### Added
+
+- Reverse-proxy **`/trips`** (nginx + Vite) so `@trip` map links stay same-origin with chat (`/ws`, `/api`, `/uploads`)
+- Shared `MarkdownContent`: GFM, HTML-tag protection in prose, syntax highlighting via highlight.js (language from the fence info string / no auto-detect)
+- Copy button on the tool-calls panel
+
+### Changed
+
+- Mode picker and profile overrides are **per-session** (localStorage keyed by session ID). New chats no longer inherit the previous chat's mode or overrides
+- Retry last prompt forwards the current profile overrides and incognito flag
+- Profile modal loads `/api/profiles?include_abstract=true` so cloud tier models show in the dropdown
+- Memory Settings: schema load failures stay on the Schemas tab > banner when `sql_schema_tool` is missing > scan/clear disabled then
+
+### Fixed
+
+- Memory modal Facts/Memories error banner when `/api/memory/schemas` 503'd (private SQL plugin absent)
+- Bare fences mislabeled as random languages (e.g., vbnet)
+
 ## [0.4.0] - 2026-08-02
 
 Requires [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[≥ 0.14.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.14.0)** for the recap endpoint (`POST /api/sessions/{id}/recap`).

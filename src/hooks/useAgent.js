@@ -1269,25 +1269,38 @@ export const useAgent = () => {
     ],
   );
 
-  const retryQuery = useCallback((promptText, editedText) => {
-    const currentSessionId = sessionIdRef.current;
-    if (!currentSessionId || !promptText) return;
+  const retryQuery = useCallback(
+    (promptText, editedText, profileOverrides = {}) => {
+      const currentSessionId = sessionIdRef.current;
+      if (!currentSessionId || !promptText) return;
 
-    setMessages((prev) => {
-      let cut = prev.length;
-      for (let i = prev.length - 1; i >= 0; i--) {
-        const m = prev[i];
-        if (m.type === "query" && m.text === promptText) {
-          cut = i;
-          break;
+      setMessages((prev) => {
+        let cut = prev.length;
+        for (let i = prev.length - 1; i >= 0; i--) {
+          const m = prev[i];
+          if (m.type === "query" && m.text === promptText) {
+            cut = i;
+            break;
+          }
         }
-      }
-      retrySnapshotRef.current = { cut, removed: prev.slice(cut) };
-      return prev.slice(0, cut);
-    });
+        retrySnapshotRef.current = { cut, removed: prev.slice(cut) };
+        return prev.slice(0, cut);
+      });
 
-    ws.retryQuery(currentSessionId, promptText, editedText);
-  }, []);
+      const overrides = {};
+      if (profileOverrides && Object.keys(profileOverrides).length > 0) {
+        overrides.profiles = profileOverrides;
+      }
+      if (incognito) overrides.incognito = true;
+      ws.retryQuery(
+        currentSessionId,
+        promptText,
+        editedText,
+        Object.keys(overrides).length > 0 ? overrides : undefined,
+      );
+    },
+    [incognito],
+  );
 
   const rerouteQuery = useCallback(
     (originalText, originalMode, newMode) => {

@@ -192,11 +192,14 @@ class AgentWS {
    * deletes the prompt + everything after it, scrubs semantic memory,
    * and re-runs either *promptText* or *editedText*.
    */
-  retryQuery(sessionId, promptText, editedText) {
+  retryQuery(sessionId, promptText, editedText, overrides) {
     const msg = { type: "query.retry", prompt_text: promptText };
     if (sessionId) msg.session_id = sessionId;
     if (editedText !== undefined && editedText !== null) {
       msg.edited_text = editedText;
+    }
+    if (overrides) {
+      msg.overrides = overrides;
     }
     this._send(msg);
   }

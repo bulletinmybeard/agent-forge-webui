@@ -12,6 +12,8 @@ export default function MemorySettings({ open, onClose }) {
   const [schemas, setSchemas] = useState([]);
   const [schemasLoading, setSchemasLoading] = useState(false);
   const [schemaCacheDisabled, setSchemaCacheDisabled] = useState(false);
+  const [schemaToolAvailable, setSchemaToolAvailable] = useState(true);
+  const [schemasError, setSchemasError] = useState(null);
   const [scanningDb, setScanningDb] = useState(null);
 
   useEffect(() => {
@@ -72,15 +74,19 @@ export default function MemorySettings({ open, onClose }) {
 
   const loadSchemas = useCallback(async () => {
     setSchemasLoading(true);
-    setError(null);
+    setSchemasError(null);
     try {
       const res = await fetch("/api/memory/schemas");
       if (!res.ok) throw new Error(`schemas: ${res.status}`);
       const data = await res.json();
       setSchemas(data.databases || []);
       setSchemaCacheDisabled(Boolean(data.cache_disabled));
+      // false only when backend reports the private plugin missing
+      setSchemaToolAvailable(data.schema_tool_available !== false);
     } catch (err) {
-      setError(String(err));
+      // Keep schema failures off the Facts/Memories banner
+      setSchemasError(String(err));
+      setSchemas([]);
     } finally {
       setSchemasLoading(false);
     }
@@ -299,6 +305,8 @@ export default function MemorySettings({ open, onClose }) {
               schemas={schemas}
               loading={schemasLoading}
               cacheDisabled={schemaCacheDisabled}
+              schemaToolAvailable={schemaToolAvailable}
+              schemasError={schemasError}
               onToggleCache={handleToggleCacheDisabled}
               onScan={handleScanSchema}
               onClear={handleClearSchema}
@@ -440,6 +448,8 @@ const SchemasTable = ({
   schemas,
   loading,
   cacheDisabled,
+  schemaToolAvailable = true,
+  schemasError = null,
   onToggleCache,
   onScan,
   onClear,
@@ -448,6 +458,13 @@ const SchemasTable = ({
 }) => {
   if (loading && !schemas.length) {
     return <div className="text-sm text-gray-400">Loading…</div>;
+  }
+  if (schemasError) {
+    return (
+      <div className="rounded border border-amber-800/50 bg-amber-950/20 px-3 py-2 text-sm text-amber-200">
+        Could not load DB schemas: {schemasError}
+      </div>
+    );
   }
   if (!schemas.length) {
     return (
@@ -462,12 +479,20 @@ const SchemasTable = ({
 
   return (
     <>
+      {!schemaToolAvailable && (
+        <div className="mb-3 rounded border border-amber-800/50 bg-amber-950/20 px-3 py-2 text-xs text-amber-200">
+          Schema cache plugin (<code className="text-amber-100">sql_schema_tool</code>) is not
+          installed on this host. Configured databases are listed; scan/clear need the private
+          plugin.
+        </div>
+      )}
       <div className="mb-3 flex items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-xs text-gray-400 select-none cursor-pointer">
           <input
             type="checkbox"
             checked={cacheDisabled}
             onChange={onToggleCache}
+            disabled={!schemaToolAvailable}
             className="h-3.5 w-3.5 accent-indigo-500"
           />
           Always fetch fresh (bypass cache)
@@ -475,7 +500,7 @@ const SchemasTable = ({
         <button
           type="button"
           onClick={onClearAll}
-          disabled={!cachedCount}
+          disabled={!cachedCount || !schemaToolAvailable}
           className="rounded border border-red-800 bg-red-900/30 px-3 py-1 text-xs text-red-300 hover:bg-red-900/50 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Clear all ({cachedCount})

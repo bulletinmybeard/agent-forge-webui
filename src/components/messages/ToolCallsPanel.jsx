@@ -1,4 +1,5 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
+import CopyButton from "../CopyButton";
 
 const TOKEN_CLASSES = {
   binary: "text-emerald-300",
@@ -189,6 +190,19 @@ const AutoSudoPanel = ({ command }) => {
   );
 };
 
+/** Plain-text form of tool calls for the clipboard (readable, not DOM selection). */
+export const formatToolCallsForCopy = (calls) => {
+  if (!calls?.length) return "";
+  return calls
+    .map((call) => {
+      const argStr = Object.entries(call.args || {})
+        .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+        .join(", ");
+      return `${call.name}(${argStr})`;
+    })
+    .join("\n");
+};
+
 const SaveButton = ({ isSaved, onSave, onRemove }) => {
   const [busy, setBusy] = useState(false);
 
@@ -218,7 +232,7 @@ const SaveButton = ({ isSaved, onSave, onRemove }) => {
       onClick={handleClick}
       disabled={busy}
       title={isSaved ? "Remove from cheat sheet" : "Save to cheat sheet"}
-      className={`ml-auto flex items-center gap-1 text-xs transition-colors px-1.5 py-0.5 rounded
+      className={`flex items-center gap-1 text-xs transition-colors px-1.5 py-0.5 rounded
         ${
           isSaved ? "text-emerald-400 hover:text-red-400" : "text-gray-500 hover:text-sky-300"
         } ${busy ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
@@ -259,6 +273,7 @@ const SaveButton = ({ isSaved, onSave, onRemove }) => {
 
 export default function ToolCallsPanel({ calls, _restored, _live, onSave, onRemove, isSaved }) {
   const [expanded, setExpanded] = useState(!_restored);
+  const copyText = useMemo(() => formatToolCallsForCopy(calls), [calls]);
 
   if (!calls || calls.length === 0) {
     return null;
@@ -294,7 +309,10 @@ export default function ToolCallsPanel({ calls, _restored, _live, onSave, onRemo
               ({callCount} call{callCount !== 1 ? "s" : ""})
             </span>
           )}
-          <SaveButton isSaved={!!isSaved} onSave={onSave} onRemove={onRemove} />
+          <div className="ml-auto flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <CopyButton text={copyText} />
+            <SaveButton isSaved={!!isSaved} onSave={onSave} onRemove={onRemove} />
+          </div>
         </div>
 
         {expanded && (

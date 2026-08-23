@@ -173,20 +173,48 @@
   font-size: 0.875em;
   border: 1px solid #334155;
 }
-.markdown-content pre {
+.markdown-content pre,
+.markdown-content pre.hljs-pre {
   background: #0f172a;
   border: 1px solid #1e293b;
   padding: 0.8em 1em;
   border-radius: 0.4rem;
   overflow-x: auto;
   margin: 0.6em 0;
+  position: relative;
 }
 .markdown-content pre code {
   background: none;
   border: none;
   padding: 0;
-  color: #e2e8f0;
   font-size: 0.85em;
+  /* Let highlight.js token colors win; keep a readable default for unhighlighted */
+  color: #e2e8f0;
+}
+.markdown-content pre code.hljs {
+  background: transparent;
+  padding: 0;
+}
+/* Language chip on fenced blocks (set via data-language on <code>) */
+.markdown-content pre code[data-language]::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 0.35rem;
+  right: 0.55rem;
+  font-size: 0.65rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  color: #94a3b8;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  pointer-events: none;
+}
+.markdown-content pre:has(code[data-language]) {
+  padding-top: 1.6em;
 }
 
 .markdown-content table {
