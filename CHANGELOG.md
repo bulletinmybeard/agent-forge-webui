@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-23
+
 Needs the matching [AgentForge](https://github.com/bulletinmybeard/agent-forge) **Unreleased** tree for `/trips` maps, session `overrides.profiles`, and `GET /api/memory/schemas` `schema_tool_available`. Recap still needs AgentForge **≥ 0.14.0**.
 
 ### Added
