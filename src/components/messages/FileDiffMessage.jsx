@@ -1,27 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
+import { displayFileDiffPath, fileDiffPresentation } from "../../lib/fileDiff";
 
 const COLLAPSE_LINES = 40;
-
-const actionStyle = (action) => {
-  switch (action) {
-    case "reverted":
-      return { border: "border-l-amber-500/60", label: "Reverted", badge: "text-amber-400" };
-    case "written":
-      return { border: "border-l-emerald-500/60", label: "Written", badge: "text-emerald-400" };
-    case "compared":
-      return { border: "border-l-violet-500/60", label: "Compared", badge: "text-violet-400" };
-    // biome-ignore lint/complexity/noUselessSwitchCase: Keep explicit "edited" case for readability.
-    case "edited":
-    default:
-      return { border: "border-l-sky-500/60", label: "Edited", badge: "text-sky-400" };
-  }
-};
-
-const basename = (p) => {
-  if (!p) return "";
-  const idx = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
-  return idx >= 0 ? p.slice(idx + 1) : p;
-};
 
 const classifyLine = (line) => {
   if (line.startsWith("+++") || line.startsWith("---")) return "meta";
@@ -39,12 +19,15 @@ export default function FileDiffMessage({
   additions,
   deletions,
   diff_text,
+  outcome,
+  pendingConfirm,
+  onConfirm,
 }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const style = actionStyle(action);
-  const fileName = action === "compared" ? path || "(comparison)" : basename(path);
+  const style = fileDiffPresentation({ action, post_hash, outcome });
+  const fileName = action === "compared" ? path || "(comparison)" : displayFileDiffPath(path);
 
   const lines = useMemo(() => {
     if (!diff_text) return [];
@@ -74,7 +57,10 @@ export default function FileDiffMessage({
     >
       <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-gray-900/80 border-b border-gray-800">
         <div className="flex items-center gap-2 min-w-0">
-          <span className={`text-xs font-medium ${style.badge}`}>&#x2713; {style.label}</span>
+          <span className={`text-xs font-medium ${style.badge}`}>
+            {style.pending ? "" : "\u2713 "}
+            {style.label}
+          </span>
           <span className="text-gray-400 text-xs">·</span>
           <code className="text-xs text-gray-200 truncate" title={path}>
             {fileName || "(unknown file)"}
@@ -144,6 +130,41 @@ export default function FileDiffMessage({
       ) : (
         <div className="px-3 py-2 text-xs text-gray-500 italic">
           No textual diff available (binary file or empty change).
+        </div>
+      )}
+
+      {style.pending && pendingConfirm && onConfirm && (
+        <div className="px-3 py-2 border-t border-amber-800/60 bg-amber-950/40 flex items-center justify-between gap-4">
+          <span className="text-xs text-amber-200">
+            {pendingConfirm.prompt || `Write ${fileName}?`}
+          </span>
+          <div className="flex gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => onConfirm(false)}
+              className="px-3 py-1 text-xs font-medium text-gray-300 bg-gray-800 border border-gray-700
+                         rounded hover:bg-gray-700 transition-colors"
+            >
+              No
+            </button>
+            <button
+              type="button"
+              onClick={() => onConfirm(true)}
+              className="px-3 py-1 text-xs font-medium text-white bg-amber-600
+                         rounded hover:bg-amber-500 transition-colors"
+            >
+              This time
+            </button>
+            <button
+              type="button"
+              onClick={() => onConfirm(true, { autoAccept: true })}
+              className="px-3 py-1 text-xs font-medium text-amber-200 bg-amber-800
+                         rounded hover:bg-amber-700 transition-colors"
+              title="Auto-confirm remaining writes in this chat session"
+            >
+              This session
+            </button>
+          </div>
         </div>
       )}
     </div>

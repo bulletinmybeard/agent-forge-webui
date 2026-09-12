@@ -1,18 +1,23 @@
-export default function ConfirmDialog({ type, prompt, confirmed, autoAccepted, onConfirm }) {
+export default function ConfirmDialog({
+  type,
+  prompt,
+  confirmed,
+  autoAccepted,
+  timedOut,
+  onConfirm,
+}) {
   if (type === "confirm_answer") {
+    const label = confirmed ? "Confirmed" : timedOut ? "Timed out" : "Cancelled";
+    const color = confirmed ? "text-emerald-400" : timedOut ? "text-amber-400" : "text-red-400";
     return (
       <div className="flex items-center gap-2 text-sm py-1">
-        <span className={confirmed ? "text-emerald-400" : "text-red-400"}>
-          {confirmed ? "✓" : "✗"}
-        </span>
+        <span className={color}>{confirmed ? "✓" : "✗"}</span>
         <span className="text-gray-400">{prompt}</span>
-        <span className={confirmed ? "text-emerald-400" : "text-red-400"}>
-          {confirmed ? "Confirmed" : "Cancelled"}
-        </span>
+        <span className={color}>{label}</span>
         {autoAccepted && (
           <span
             className="text-amber-500/70 text-xs ml-1"
-            title="You picked 'Yes (all)' — remaining destructive ops in this run will be auto-confirmed"
+            title="You picked 'This session' — remaining writes in this chat are auto-confirmed"
           >
             (Yes-all)
           </span>
@@ -53,16 +58,16 @@ export default function ConfirmDialog({ type, prompt, confirmed, autoAccepted, o
             className="px-3 py-1 text-xs font-medium text-white bg-amber-600
                        rounded hover:bg-amber-500 transition-colors"
           >
-            Yes
+            This time
           </button>
           <button
             type="button"
             onClick={() => onConfirm(true, { autoAccept: true })}
             className="px-3 py-1 text-xs font-medium text-amber-200 bg-amber-800
                        rounded hover:bg-amber-700 transition-colors"
-            title="Auto-confirm all remaining destructive operations for this response"
+            title="Auto-confirm remaining writes in this chat session"
           >
-            Yes (all)
+            This session
           </button>
         </div>
       </div>

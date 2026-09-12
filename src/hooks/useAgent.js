@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { v7 as uuidv7 } from "uuid";
+import { isPendingFileDiff } from "../lib/fileDiff";
 import ws from "../lib/ws";
 import useRecap from "./useRecap";
 
@@ -224,6 +225,17 @@ export const useAgent = () => {
       setHasMoreMessages(hasMore);
       oldestSequenceRef.current = oldestSeq;
 
+      fetch(`/api/sessions/${urlSessionId}/job`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((job) => {
+          if (job && (job.status === "running" || job.status === "pending")) {
+            setRunningTracked(true);
+            const pending = pendingConfirmFromRestored(restored);
+            if (pending) setConfirm(pending);
+          }
+        })
+        .catch(() => {});
+
       const lastConfig = [...restored].reverse().find((m) => m.type === "config");
       if (lastConfig?.noHistory) {
         setNoHistory(true);
@@ -233,7 +245,7 @@ export const useAgent = () => {
       historyReadyRef.current = true;
       setHistoryLoaded(true);
     });
-  }, [urlSessionId]);
+  }, [urlSessionId, setRunningTracked]);
 
   useEffect(() => {
     if (!historyReadyRef.current) return;
@@ -407,7 +419,24 @@ export const useAgent = () => {
         });
         return;
       }
-      setConfirm({ requestId: msg.request_id, prompt: msg.prompt });
+      const requestId = msg.request_id || msg.requestId;
+      const prompt = msg.prompt || "";
+      setConfirm({ requestId, prompt });
+      addMessage({
+        type: "confirm_prompt",
+        requestId,
+        prompt,
+      });
+    };
+
+    const onConfirmTimeout = (msg) => {
+      setConfirm((current) => {
+        if (current && msg.request_id && current.requestId !== msg.request_id) {
+          return current;
+        }
+        return null;
+      });
+      setMessages((prev) => stampFileDiffOutcome(prev, "timed_out"));
     };
 
     const onSecretRequest = (msg) => {
@@ -470,15 +499,27 @@ export const useAgent = () => {
         const liveTs = liveResultTsRef.current;
         liveResultTsRef.current = null;
         setMessages((prev) =>
-          prev.map((m) =>
-            m._ts === liveTs
-              ? { ...m, text: msg.text, elapsed: msg.elapsed, _streaming: false }
-              : m,
+          stampFileDiffOutcome(
+            prev.map((m) =>
+              m._ts === liveTs
+                ? { ...m, text: msg.text, elapsed: msg.elapsed, _streaming: false }
+                : m,
+            ),
+            "cancelled",
           ),
         );
       } else {
-        addMessage({ type: "result", text: msg.text, elapsed: msg.elapsed });
+        setMessages((prev) => [
+          ...stampFileDiffOutcome(prev, "cancelled"),
+          {
+            type: "result",
+            text: msg.text,
+            elapsed: msg.elapsed,
+            _ts: `${Date.now()}-${++msgSeqRef.current}`,
+          },
+        ]);
       }
+      setConfirm(null);
       setAgentStatus(null);
       setRunningTracked(false);
     };
@@ -514,6 +555,7 @@ export const useAgent = () => {
     const onError = (msg) => {
       finalizeTools();
       liveResultTsRef.current = null;
+      setConfirm(null);
       addMessage({
         type: "error",
         message: msg.message,
@@ -526,10 +568,15 @@ export const useAgent = () => {
     const onCancelled = (msg) => {
       finalizeTools();
       liveResultTsRef.current = null;
-      addMessage({
-        type: "cancelled",
-        elapsed: msg.elapsed,
-      });
+      setConfirm(null);
+      setMessages((prev) => [
+        ...stampFileDiffOutcome(prev, "cancelled"),
+        {
+          type: "cancelled",
+          elapsed: msg.elapsed,
+          _ts: `${Date.now()}-${++msgSeqRef.current}`,
+        },
+      ]);
       setAgentStatus(null);
       setRunningTracked(false);
     };
@@ -982,6 +1029,8 @@ export const useAgent = () => {
     ws.on("tool.call", onToolCall);
     ws.on("tool.calls.flush", onToolFlush);
     ws.on("confirm.request", onConfirmRequest);
+    ws.on("confirm_prompt", onConfirmRequest);
+    ws.on("confirm.timeout", onConfirmTimeout);
     ws.on("secret.request", onSecretRequest);
     ws.on("result.chunk", onResultChunk);
     ws.on("result.done", onResultDone);
@@ -1049,6 +1098,8 @@ export const useAgent = () => {
       ws.off("tool.call", onToolCall);
       ws.off("tool.calls.flush", onToolFlush);
       ws.off("confirm.request", onConfirmRequest);
+      ws.off("confirm_prompt", onConfirmRequest);
+      ws.off("confirm.timeout", onConfirmTimeout);
       ws.off("secret.request", onSecretRequest);
       ws.off("result.chunk", onResultChunk);
       ws.off("result.done", onResultDone);
@@ -1330,15 +1381,19 @@ export const useAgent = () => {
     (confirmed, { autoAccept = false } = {}) => {
       if (!confirm) return;
       ws.sendConfirmResponse(confirm.requestId, confirmed, { autoAccept });
-      addMessage({
-        type: "confirm_answer",
-        prompt: confirm.prompt,
-        confirmed,
-        autoAccepted: autoAccept,
-      });
+      setMessages((prev) => [
+        ...stampFileDiffOutcome(prev, confirmed ? "confirmed" : "cancelled"),
+        {
+          type: "confirm_answer",
+          prompt: confirm.prompt,
+          confirmed,
+          autoAccepted: autoAccept,
+          _ts: `${Date.now()}-${++msgSeqRef.current}`,
+        },
+      ]);
       setConfirm(null);
     },
-    [confirm, addMessage],
+    [confirm],
   );
 
   const respondSecret = useCallback(
@@ -1439,6 +1494,37 @@ export const useAgent = () => {
 
   useRecap({ sessionId, running, messages, confirm, secret, onRecap: handleRecap });
 
+  // Worker persists confirm_prompt / file.diff even when the live WS event
+  // is dropped. While a run is waiting on Yes/No, poll the newest messages
+  // so the confirm bar still appears.
+  useEffect(() => {
+    if (!running || confirm) return;
+    const sid = sessionIdRef.current;
+    if (!sid) return;
+    let cancelled = false;
+
+    const pull = () => {
+      fetch(`/api/sessions/${sid}/messages?limit=20`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((page) => {
+          if (cancelled || !page) return;
+          const dbMessages = page.messages || page;
+          const restored = restoreMessages(dbMessages);
+          const pending = pendingConfirmFromRestored(restored);
+          if (pending) setConfirm(pending);
+          setMessages((prev) => mergeRestoredTail(prev, restored));
+        })
+        .catch(() => {});
+    };
+
+    pull();
+    const id = setInterval(pull, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [running, confirm]);
+
   return {
     connected,
     sessionId,
@@ -1489,6 +1575,60 @@ export const useAgent = () => {
     loadMoreMessages,
   };
 };
+
+function stampFileDiffOutcome(messages, outcome) {
+  const next = messages.slice();
+  for (let i = next.length - 1; i >= 0; i--) {
+    if (
+      next[i].type === "file_diff" &&
+      !next[i].outcome &&
+      isPendingFileDiff(next[i], { liveConfirm: true })
+    ) {
+      next[i] = { ...next[i], outcome };
+      break;
+    }
+  }
+  return next;
+}
+
+function mergeRestoredTail(prev, restored) {
+  const extra = [];
+  for (const m of restored) {
+    if (m.type === "file_diff") {
+      const exists = prev.some(
+        (p) =>
+          p.type === "file_diff" &&
+          p.path === m.path &&
+          p.additions === m.additions &&
+          p.deletions === m.deletions &&
+          (p.diff_text || "") === (m.diff_text || ""),
+      );
+      if (!exists) extra.push(m);
+    } else if (m.type === "confirm_prompt" && m.requestId) {
+      const exists = prev.some((p) => p.requestId === m.requestId);
+      if (!exists) extra.push(m);
+    }
+  }
+  return extra.length ? [...prev, ...extra] : prev;
+}
+
+function pendingConfirmFromRestored(restored) {
+  let pending = null;
+  for (const m of restored) {
+    if (m.type === "confirm_prompt" && m.requestId) {
+      pending = { requestId: m.requestId, prompt: m.prompt };
+    }
+    if (
+      m.type === "confirm_answer" ||
+      m.type === "result" ||
+      m.type === "cancelled" ||
+      m.type === "error"
+    ) {
+      pending = null;
+    }
+  }
+  return pending;
+}
 
 const restoreMessages = (dbMessages) => {
   const restored = [];
@@ -1571,19 +1711,29 @@ const restoreMessages = (dbMessages) => {
       case "confirm_prompt":
         restored.push({
           type: "confirm_prompt",
-          prompt: meta.prompt,
+          requestId: meta.request_id,
+          prompt: meta.prompt || msg.content || "",
           _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
         });
         break;
 
-      case "confirm_answer":
+      case "confirm_answer": {
+        const outcome = meta.timed_out ? "timed_out" : meta.confirmed ? "confirmed" : "cancelled";
+        for (let i = restored.length - 1; i >= 0; i--) {
+          if (restored[i].type === "file_diff" && !restored[i].outcome) {
+            restored[i] = { ...restored[i], outcome };
+            break;
+          }
+        }
         restored.push({
           type: "confirm_answer",
-          prompt: meta.prompt,
+          prompt: meta.prompt || msg.content || "",
           confirmed: meta.confirmed,
+          timedOut: !!meta.timed_out,
           _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
         });
         break;
+      }
 
       case "result":
         if (msg.tool_calls && msg.tool_calls.length > 0 && !sawToolCallsInTurn) {

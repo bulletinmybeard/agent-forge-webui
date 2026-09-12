@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { formatElapsed } from "../../lib/formatTime";
+import { stripWrappingFence } from "../../lib/markdown";
 import CopyButton from "../CopyButton";
 import MarkdownContent from "../MarkdownContent";
 
@@ -120,18 +121,6 @@ const DownloadButton = ({ text, query }) => {
   );
 };
 
-const stripWrappingFence = (text) => {
-  if (!text) return text;
-  const stripped = text.trim();
-  if (!stripped.startsWith("```")) return text;
-  const lines = stripped.split("\n");
-  if (lines.length < 2) return text;
-  if (!lines[lines.length - 1].trim().startsWith("```")) return text;
-  const fenceCount = lines.filter((ln) => ln.trim().startsWith("```")).length;
-  if (fenceCount !== 2) return text;
-  return lines.slice(1, -1).join("\n").trim();
-};
-
 const StreamingCursor = () => {
   return (
     <span
@@ -195,7 +184,11 @@ export default function ResultMessage({
   onRemove,
 }) {
   const isStreaming = !!_streaming;
-  const renderText = isStreaming ? text || "" : stripWrappingFence(text || "");
+  const raw = text || "";
+  // Keep ```json / ```python / … so MarkdownContent can highlight. Only unwrap
+  // a whole-message ```markdown (or bare) fence so GFM still renders.
+  const renderText = isStreaming ? raw : stripWrappingFence(raw, { markdownWrapOnly: true });
+  const copyText = isStreaming ? raw : stripWrappingFence(raw);
 
   return (
     <div className="border border-gray-800 border-l-2 border-l-emerald-500/50 rounded-lg overflow-hidden">
@@ -214,7 +207,7 @@ export default function ResultMessage({
             />
           )}
           {!isStreaming && <DownloadButton text={renderText} query={query} />}
-          {!isStreaming && <CopyButton text={renderText} />}
+          {!isStreaming && <CopyButton text={copyText} />}
           {elapsed != null && !isStreaming && (
             <span className="text-gray-500 text-xs">{formatElapsed(elapsed)}</span>
           )}
