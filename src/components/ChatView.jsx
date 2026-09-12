@@ -119,6 +119,12 @@ const detectModeFromMessages = (messages, aliasToMode) => {
       if (p === "sql") return "sql";
       if (p === "discovery") return "discover";
       if (p === "review") return "review";
+      if (p === "builder") {
+        const r = (msg.reason || "").toLowerCase();
+        return r.startsWith("build") ? "build" : "plan";
+      }
+      if (p === "plan") return "plan";
+      if (p === "build") return "build";
       if (p.includes("web-search")) return "web";
     }
   }

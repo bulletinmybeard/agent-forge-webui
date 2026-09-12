@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { v7 as uuidv7 } from "uuid";
 import { isPendingFileDiff } from "../lib/fileDiff";
+import { isPlanDocumentResult } from "../lib/planDocument";
 import ws from "../lib/ws";
 import useRecap from "./useRecap";
 
@@ -511,17 +512,17 @@ export const useAgent = () => {
       } else {
         setMessages((prev) => [
           ...stampFileDiffOutcome(prev, "cancelled"),
-          {
-            type: "result",
-            text: msg.text,
-            elapsed: msg.elapsed,
+          resultFromAgentPayload({
+            ...msg,
             _ts: `${Date.now()}-${++msgSeqRef.current}`,
-          },
+          }),
         ]);
       }
-      setConfirm(null);
       setAgentStatus(null);
-      setRunningTracked(false);
+      if (!isPlanDocumentResult(msg, msg.text)) {
+        setConfirm(null);
+        setRunningTracked(false);
+      }
     };
 
     const onSummary = (msg) => {
@@ -1591,6 +1592,21 @@ function stampFileDiffOutcome(messages, outcome) {
   return next;
 }
 
+function resultFromAgentPayload(msg) {
+  const text = msg.text || "";
+  const base = {
+    text,
+    elapsed: msg.elapsed,
+    planPath: msg.plan_path || msg.planPath,
+    planTarget: msg.plan_target || msg.planTarget,
+    _ts: msg._ts || `${Date.now()}`,
+  };
+  if (isPlanDocumentResult(msg, text)) {
+    return { ...base, type: "plan_document" };
+  }
+  return { ...base, type: "result" };
+}
+
 function mergeRestoredTail(prev, restored) {
   const extra = [];
   for (const m of restored) {
@@ -1747,12 +1763,15 @@ const restoreMessages = (dbMessages) => {
           seq++;
         }
         sawToolCallsInTurn = false;
-        restored.push({
-          type: "result",
-          text: msg.content || meta.text || "",
-          elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
-        });
+        restored.push(
+          resultFromAgentPayload({
+            text: msg.content || meta.text || "",
+            elapsed: meta.elapsed,
+            plan_path: meta.plan_path,
+            plan_target: meta.plan_target,
+            _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          }),
+        );
         break;
 
       case "recap":

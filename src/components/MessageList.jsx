@@ -17,6 +17,7 @@ import FileDiffMessage from "./messages/FileDiffMessage";
 import ModelFallbackMessage from "./messages/ModelFallbackMessage";
 import MonitorJobMessage from "./messages/MonitorJobMessage";
 import QueryMessage from "./messages/QueryMessage";
+import PlanDocumentMessage from "./messages/PlanDocumentMessage";
 import RecapMessage from "./messages/RecapMessage";
 import ResearchPlanMessage from "./messages/ResearchPlanMessage";
 import ResultMessage from "./messages/ResultMessage";
@@ -39,6 +40,7 @@ const MESSAGE_COMPONENTS = {
   confirm_auto_accepted: ConfirmDialog,
   secret_answer: SecretDialog,
   result: ResultMessage,
+  plan_document: PlanDocumentMessage,
   summary: SummaryMessage,
   recap: RecapMessage,
   error: ErrorMessage,
