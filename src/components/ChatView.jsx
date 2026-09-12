@@ -10,6 +10,8 @@ import ChatInput from "./ChatInput";
 import CommandPermissionsModal from "./CommandPermissionsModal";
 import MemorySettings from "./MemorySettings";
 import MessageList from "./MessageList";
+import ConfirmDialog from "./messages/ConfirmDialog";
+import SecretDialog from "./messages/SecretDialog";
 import ProfileModal from "./ProfileModal";
 
 const WelcomeGreeting = () => {
@@ -117,6 +119,12 @@ const detectModeFromMessages = (messages, aliasToMode) => {
       if (p === "sql") return "sql";
       if (p === "discovery") return "discover";
       if (p === "review") return "review";
+      if (p === "builder") {
+        const r = (msg.reason || "").toLowerCase();
+        return r.startsWith("build") ? "build" : "plan";
+      }
+      if (p === "plan") return "plan";
+      if (p === "build") return "build";
       if (p.includes("web-search")) return "web";
     }
   }
@@ -437,7 +445,6 @@ export default function ChatView({
             confirm={confirm}
             onConfirm={onConfirm}
             secret={secret}
-            onSecret={onSecret}
             agentStatus={agentStatus}
             savedNoteTsSet={savedNoteTsSet}
             onSaveToolCalls={onSaveToolCalls}
@@ -458,6 +465,16 @@ export default function ChatView({
             onLoadMore={onLoadMore}
             onPinAnchor={canvasEnabled ? canvas.addAnchor : undefined}
           />
+          {confirm && (
+            <div className="shrink-0 px-4 pb-2 max-w-6xl w-full mx-auto">
+              <ConfirmDialog type="confirm_prompt" prompt={confirm.prompt} onConfirm={onConfirm} />
+            </div>
+          )}
+          {secret && (
+            <div className="shrink-0 px-4 pb-2 max-w-6xl w-full mx-auto">
+              <SecretDialog type="secret_prompt" prompt={secret.prompt} onSubmit={onSecret} />
+            </div>
+          )}
           <ChatInput {...inputProps} />
         </div>
       )}

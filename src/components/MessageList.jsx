@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { isPendingFileDiff } from "../lib/fileDiff";
 import AgentEscalationMessage from "./messages/AgentEscalationMessage";
 import AgentRecoveryMessage from "./messages/AgentRecoveryMessage";
 import AgentRetryMessage from "./messages/AgentRetryMessage";
@@ -16,6 +17,7 @@ import FileDiffMessage from "./messages/FileDiffMessage";
 import ModelFallbackMessage from "./messages/ModelFallbackMessage";
 import MonitorJobMessage from "./messages/MonitorJobMessage";
 import QueryMessage from "./messages/QueryMessage";
+import PlanDocumentMessage from "./messages/PlanDocumentMessage";
 import RecapMessage from "./messages/RecapMessage";
 import ResearchPlanMessage from "./messages/ResearchPlanMessage";
 import ResultMessage from "./messages/ResultMessage";
@@ -38,6 +40,7 @@ const MESSAGE_COMPONENTS = {
   confirm_auto_accepted: ConfirmDialog,
   secret_answer: SecretDialog,
   result: ResultMessage,
+  plan_document: PlanDocumentMessage,
   summary: SummaryMessage,
   recap: RecapMessage,
   error: ErrorMessage,
@@ -122,7 +125,6 @@ export default function MessageList({
   confirm,
   onConfirm,
   secret,
-  onSecret,
   agentStatus,
   savedNoteTsSet,
   onSaveToolCalls,
@@ -184,10 +186,10 @@ export default function MessageList({
     const lastMsg = messages[messages.length - 1];
     const isNewQuery = lastMsg?.type === "query";
 
-    if (isNearBottom.current || isNewQuery) {
+    if (isNearBottom.current || isNewQuery || confirm || secret) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, confirm, secret]);
 
   const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current;
@@ -333,6 +335,20 @@ export default function MessageList({
                     rerouteQuery(capturedQuery, capturedMode, newMode);
                 }
 
+                if (msg.type === "file_diff") {
+                  extraProps.outcome = msg.outcome;
+                  const matchesPath =
+                    !msg.path || !confirm?.prompt || confirm.prompt.includes(msg.path);
+                  extraProps.pendingConfirm =
+                    confirm && matchesPath && isPendingFileDiff(msg, { liveConfirm: confirm })
+                      ? confirm
+                      : null;
+                  extraProps.onConfirm = extraProps.pendingConfirm ? onConfirm : undefined;
+                }
+
+                // Live Yes/No lives in the bar above the composer. Don't duplicate.
+                if (msg.type === "confirm_prompt") return null;
+
                 if (msg.type === "result") {
                   if (lastQueryTitle) extraProps.query = lastQueryTitle;
                   if (onSaveAnswer || onRemoveAnswer) {
@@ -368,12 +384,6 @@ export default function MessageList({
             );
           });
         })()}
-
-        {confirm && (
-          <ConfirmDialog type="confirm_prompt" prompt={confirm.prompt} onConfirm={onConfirm} />
-        )}
-
-        {secret && <SecretDialog type="secret_prompt" prompt={secret.prompt} onSubmit={onSecret} />}
 
         {running && !confirm && !secret && <AgentStatusLine status={agentStatus} />}
 
