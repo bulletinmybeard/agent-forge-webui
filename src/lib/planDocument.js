@@ -10,15 +10,33 @@ export function isPlanDocumentResult(meta, text) {
   if (meta?.plan_path) return true;
   const body = text || "";
   if (body.startsWith("# Build recap")) return true;
-  if (body.startsWith("---") && /status:\s*(draft|approved|building|done|cancelled)/i.test(body)) {
+  if (/^# Build (reverted|re-applied)/i.test(body)) return true;
+  if (
+    body.startsWith("---") &&
+    /status:\s*(draft|approved|building|done|cancelled|reverted)/i.test(body)
+  ) {
     return true;
   }
   return false;
 }
 
+/** True only for a draft plan that still needs Approve / Keep drafting. */
+export function isPlanAwaitingApproval(meta, text) {
+  if (!isPlanDocumentResult(meta, text)) return false;
+  const body = text || "";
+  if (body.startsWith("# Build recap") || /^# Build (reverted|re-applied)/i.test(body)) {
+    return false;
+  }
+  const parsed = parsePlanDocument(body);
+  return parsed.kind === "plan" && parsed.status === "draft";
+}
+
 export function parsePlanDocument(text) {
   const raw = text || "";
-  const kind = raw.startsWith("# Build recap") ? "build" : "plan";
+  let kind = "plan";
+  if (raw.startsWith("# Build recap") || /^# Build (reverted|re-applied)/i.test(raw)) {
+    kind = "build";
+  }
   let rest = raw;
   const meta = {};
   if (rest.startsWith("---")) {
@@ -64,7 +82,9 @@ export function parsePlanDocument(text) {
 
   return {
     kind,
-    status: meta.status || (kind === "build" ? "done" : "draft"),
+    status:
+      meta.status ||
+      (/^# Build reverted/i.test(raw) ? "reverted" : kind === "build" ? "done" : "draft"),
     target: meta.target || "",
     branch: meta.branch || "",
     created: meta.created || "",

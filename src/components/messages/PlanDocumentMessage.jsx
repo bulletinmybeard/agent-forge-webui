@@ -7,6 +7,7 @@ const STATUS_STYLE = {
   approved: "bg-emerald-950/60 text-emerald-400 border-emerald-800/40",
   building: "bg-amber-950/60 text-amber-400 border-amber-800/40",
   done: "bg-emerald-950/60 text-emerald-400 border-emerald-800/40",
+  reverted: "bg-stone-800/80 text-stone-300 border-stone-600/50",
   cancelled: "bg-red-950/60 text-red-400 border-red-800/40",
 };
 
@@ -21,7 +22,9 @@ export default function PlanDocumentMessage({ text, planPath, planTarget, elapse
   return (
     <div className="border border-stone-600/50 rounded-lg overflow-hidden">
       <div className="px-3 py-1.5 bg-stone-900/80 border-b border-stone-700/50 flex items-center gap-2 text-xs">
-        <span className="text-stone-300 font-medium">{isBuild ? "Build recap" : "Plan"}</span>
+        <span className="text-stone-300 font-medium">
+          {parsed.status === "reverted" ? "Build undo" : isBuild ? "Build recap" : "Plan"}
+        </span>
         <span
           className={`px-1.5 py-0.5 rounded border text-[10px] uppercase tracking-wide ${
             STATUS_STYLE[status] || STATUS_STYLE.draft

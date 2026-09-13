@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { v7 as uuidv7 } from "uuid";
 import { isPendingFileDiff, upsertFileDiffMessage } from "../lib/fileDiff";
-import { isPlanDocumentResult } from "../lib/planDocument";
+import { isPlanAwaitingApproval, isPlanDocumentResult } from "../lib/planDocument";
 import ws from "../lib/ws";
 import useRecap from "./useRecap";
 
@@ -529,7 +529,7 @@ export const useAgent = () => {
         ]);
       }
       setAgentStatus(null);
-      if (!isPlanDocumentResult(msg, msg.text)) {
+      if (!isPlanAwaitingApproval(msg, msg.text)) {
         setConfirm(null);
         setRunningTracked(false);
       }

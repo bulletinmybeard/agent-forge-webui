@@ -1,7 +1,7 @@
 /**
  *   node src/lib/planDocument.test.js
  */
-import { isPlanDocumentResult, parsePlanDocument } from "./planDocument.js";
+import { isPlanAwaitingApproval, isPlanDocumentResult, parsePlanDocument } from "./planDocument.js";
 
 const assert = (cond, msg) => {
   if (!cond) throw new Error(msg || "assert failed");
@@ -30,6 +30,15 @@ created: 2026-09-11-12-14
 assert(isPlanDocumentResult({ plan_path: "/tmp/p.md" }, "hi"), "plan_path is a plan");
 assert(isPlanDocumentResult({}, md), "frontmatter draft is a plan");
 assert(!isPlanDocumentResult({}, "just a normal answer"), "plain result is not a plan");
+assert(isPlanAwaitingApproval({}, md), "draft plan waits for approve");
+assert(
+  !isPlanAwaitingApproval({ plan_path: "/tmp/p.md" }, "# Build recap\n"),
+  "recap does not wait",
+);
+assert(
+  !isPlanAwaitingApproval({ plan_path: "/tmp/p.md" }, "# Build reverted\n\nReverted 1 file(s)."),
+  "undo does not wait",
+);
 
 const parsed = parsePlanDocument(md);
 assert(parsed.status === "draft", "status");
@@ -43,5 +52,9 @@ const recap = parsePlanDocument("# Build recap\n\n## T1 — Do the thing\nBlocke
 assert(recap.kind === "build", "build recap kind");
 assert(recap.tasks.length === 1, "recap ## T1 parsed");
 assert(recap.tasks[0].title === "Do the thing", "recap task title");
+
+const undone = parsePlanDocument("# Build reverted\n\nReverted 7 file(s).");
+assert(undone.kind === "build", "undo kind");
+assert(undone.status === "reverted", "undo status");
 
 console.log("planDocument.test.js ok");
