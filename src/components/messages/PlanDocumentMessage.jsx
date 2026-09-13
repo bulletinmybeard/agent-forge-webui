@@ -56,7 +56,9 @@ export default function PlanDocumentMessage({ text, planPath, planTarget, elapse
       )}
 
       {parsed.goal && (
-        <div className="px-3 py-2 text-sm text-gray-200 border-b border-stone-800/60">{parsed.goal}</div>
+        <div className="px-3 py-2 text-sm text-gray-200 border-b border-stone-800/60">
+          {parsed.goal}
+        </div>
       )}
 
       {parsed.findings?.length > 0 && (
@@ -79,7 +81,9 @@ export default function PlanDocumentMessage({ text, planPath, planTarget, elapse
         <div className="divide-y divide-stone-800/50">
           {parsed.tasks.map((task) => (
             <div key={task.id} className="px-3 py-2 flex items-start gap-2 text-sm">
-              <span className="font-mono text-stone-400 text-xs w-8 shrink-0 pt-0.5">{task.id}</span>
+              <span className="font-mono text-stone-400 text-xs w-8 shrink-0 pt-0.5">
+                {task.id}
+              </span>
               <div className="min-w-0">
                 <div className="text-gray-200">{task.title}</div>
                 {task.files.length > 0 && (

@@ -91,7 +91,7 @@ export function displayFileDiffPath(path) {
 /** Replace a pending proposed card for the same path with a write/edit receipt. */
 export function upsertFileDiffMessage(messages, card) {
   const list = messages || [];
-  if (!card || card.type !== "file_diff") {
+  if (card?.type !== "file_diff") {
     return [...list, card];
   }
   if (card.action && card.action !== "proposed" && card.path) {
