@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-13
+
+Needs [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[≥ 0.16.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.16.0)** for `@plan` / `@build`, plan-gate confirms (`kind=plan`), `file.diff` write receipts, and `run.idle` after worker jobs.
+
+### Added
+
+- Mode chips and cards for `@plan` / `@build`: plan document, build recap, markdown toggle
+- Plan confirm: Approve / Keep drafting (no This session on that gate)
+- `file.diff` receipts (`written` / `edited`) replace the pending proposed card
+- Build undo card (`# Build reverted`) and `run.idle` so processing clears after a fast worker job
+
+### Changed
+
+- Confirm dialog: timeout, This time / This session
+- File-diff states (proposed, written, reverted)
+- Markdown / result rendering
+- Dockerfile: Rolldown musl binding after `npm ci`
+
+### Fixed
+
+- Plan/build markdown toggle empty (`MarkdownContent` children)
+- Processing spinner stuck after `@build undo`
+
 ## [0.5.0] - 2026-08-23
 
 Needs the matching [AgentForge](https://github.com/bulletinmybeard/agent-forge) **Unreleased** tree for `/trips` maps, session `overrides.profiles`, and `GET /api/memory/schemas` `schema_tool_available`. Recap still needs AgentForge **≥ 0.14.0**.

@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Vite](https://img.shields.io/badge/Vite-8-646cff.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Biome](https://img.shields.io/badge/lint%2Fformat-Biome-60a5fa.svg?logo=biome&logoColor=white)](https://biomejs.dev/)
-[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.15.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.15.0)
+[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.16.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.16.0)
 
 > [!NOTE]
 > **Experimental!**
@@ -15,13 +15,13 @@ AgentForge WebUI is a React SPA for [AgentForge](https://github.com/bulletinmybe
 It's a pure frontend: it streams the agent's think > act > observe loop over the backend's `/ws/chat` WebSocket and calls its REST API for sessions, uploads, memory, and configs. It does nothing on its own — a running AgentForge backend is required!
 
 > [!IMPORTANT]
-> **Backend version:** this WebUI needs [AgentForge **v0.15.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.15.0) or newer.
-> **`@trip` maps** (`/trips/{uuid}`), session `overrides.profiles`, and Memory Settings `schema_tool_available` come from that release. **Recap** (`/api/sessions/{id}/recap`) is from v0.14.0. The **Command Permissions** modal depends on v0.13.0 (`/api/permissions/commands/*`, `/api/permissions/profiles/*`, session `source` filtering). Older backends will fail those endpoints (e.g., 404).
+> **Backend version:** this WebUI needs [AgentForge **v0.16.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.16.0) or newer.
+> **`@plan` / `@build`** (plan card, Approve/Keep drafting, file-diff receipts, undo/`run.idle`) come from that release. **`@trip` maps**, session `overrides.profiles`, and Memory Settings `schema_tool_available` are from v0.15.0. **Recap** (`/api/sessions/{id}/recap`) is from v0.14.0. The **Command Permissions** modal depends on v0.13.0. Older backends will fail those endpoints (e.g., 404).
 
 ## Features
 
 - Streaming chat over the `/ws/chat` WebSocket, with the full think > act > observe event stream rendered live
-- Mode picker for the `@mode` prefixes (chat, docs, search, agent, sql, logs, discover, pipeline, review, research, coding, scheduler, monitor, connectors, and custom agents including `@trip`), each with its own colour. Mode and profile overrides are per-session; new chats start clean
+- Mode picker for the `@mode` prefixes (chat, docs, search, agent, sql, logs, discover, pipeline, review, research, coding, plan, build, scheduler, monitor, connectors, and custom agents including `@trip`), each with its own colour. Mode and profile overrides are per-session; new chats start clean
 - Per-event message cards: routing, config, tool calls, confirm + secret dialogs, results, summaries, errors, search metadata, discovery, research, scheduler/monitor jobs, file diffs, agent warning/recovery/retry/escalation, model fallback, and session compaction
 - **Command Permissions** modal: manage shell/SSH allowlist, denylist, and confirm policy (runtime overrides on the AgentForge backend), plus named **profiles** (YAML baseline, blank slate, builtins `tight`/`open`, save-as / delete user profiles)
 - Connectors UI: connect and manage multi-account Google (Gmail, Drive, BigQuery, YouTube), GitLab, and GitHub connections, with per-connection product/permission display and an in-place read/write toggle
@@ -40,7 +40,7 @@ It's a pure frontend: it streams the agent's think > act > observe loop over the
 Prerequisites:
 
 - **Node 20.19+** (`engines` in `package.json`)
-- A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.15.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.15.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
+- A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.16.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.16.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
 
 ```bash
 npm install
