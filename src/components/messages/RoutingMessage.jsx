@@ -11,6 +11,8 @@ const BUILT_IN_MODES = [
   "sql",
   "coding",
   "review",
+  "plan",
+  "build",
   "research",
   "scheduler",
   "monitor",

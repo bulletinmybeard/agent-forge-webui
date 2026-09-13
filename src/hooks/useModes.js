@@ -20,6 +20,15 @@ const BASE_MODES = [
     text: "text-cyan-400",
   },
   {
+    id: "build",
+    label: "Build",
+    prefix: "@build ",
+    aliases: "@build",
+    desc: "Execute an approved plan — queued workers",
+    dot: "bg-orange-600",
+    text: "text-orange-300",
+  },
+  {
     id: "chat",
     label: "Chat",
     prefix: "",
@@ -117,6 +126,15 @@ const BASE_MODES = [
     desc: "Multi-step workflow — full tool set",
     dot: "bg-purple-500",
     text: "text-purple-400",
+  },
+  {
+    id: "plan",
+    label: "Plan",
+    prefix: "@plan ",
+    aliases: "@plan",
+    desc: "Draft a markdown plan, then approve to build",
+    dot: "bg-stone-400",
+    text: "text-stone-300",
   },
   {
     id: "research",
