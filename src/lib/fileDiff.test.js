@@ -1,7 +1,12 @@
 /**
  *   node src/lib/fileDiff.test.js
  */
-import { displayFileDiffPath, fileDiffPresentation, isPendingFileDiff } from "./fileDiff.js";
+import {
+  displayFileDiffPath,
+  fileDiffPresentation,
+  isPendingFileDiff,
+  upsertFileDiffMessage,
+} from "./fileDiff.js";
 
 const assert = (cond, msg) => {
   if (!cond) throw new Error(msg || "assert failed");
@@ -42,6 +47,14 @@ assert(written.label === "Written");
 assert(written.pending === false);
 
 assert(displayFileDiffPath("~/Downloads/kogot-7-loadout.md") === "~/Downloads/kogot-7-loadout.md");
-assert(displayFileDiffPath("/Users/rschulz/Downloads/a.md") === "/Users/rschulz/Downloads/a.md");
+assert(displayFileDiffPath("/Users/alice/Downloads/a.md") === "/Users/alice/Downloads/a.md");
+
+const proposed = { type: "file_diff", action: "proposed", path: "a.py", post_hash: "" };
+const receipt = { type: "file_diff", action: "written", path: "a.py", post_hash: "abc" };
+const upserted = upsertFileDiffMessage([proposed], receipt);
+assert(upserted.length === 1, "receipt replaces proposed");
+assert(upserted[0].action === "written");
+assert(upserted[0].post_hash === "abc");
+assert(upsertFileDiffMessage([], proposed).length === 1);
 
 console.log("fileDiff.test.js ok");

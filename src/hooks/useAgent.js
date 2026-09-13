@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { v7 as uuidv7 } from "uuid";
-import { isPendingFileDiff } from "../lib/fileDiff";
+import { isPendingFileDiff, upsertFileDiffMessage } from "../lib/fileDiff";
 import { isPlanDocumentResult } from "../lib/planDocument";
 import ws from "../lib/ws";
 import useRecap from "./useRecap";
@@ -422,11 +422,13 @@ export const useAgent = () => {
       }
       const requestId = msg.request_id || msg.requestId;
       const prompt = msg.prompt || "";
-      setConfirm({ requestId, prompt });
+      const kind = msg.kind || "";
+      setConfirm({ requestId, prompt, kind });
       addMessage({
         type: "confirm_prompt",
         requestId,
         prompt,
+        kind,
       });
     };
 
@@ -480,7 +482,7 @@ export const useAgent = () => {
 
     const onFileDiff = (msg) => {
       flushTools();
-      addMessage({
+      const card = {
         type: "file_diff",
         tool: msg.tool,
         action: msg.action,
@@ -491,11 +493,18 @@ export const useAgent = () => {
         additions: msg.additions,
         deletions: msg.deletions,
         diff_text: msg.diff_text,
+      };
+      setMessages((prev) => {
+        const seq = ++msgSeqRef.current;
+        return upsertFileDiffMessage(prev, { ...card, _ts: `${Date.now()}-${seq}` });
       });
     };
 
     const onResult = (msg) => {
       finalizeTools();
+      // Builder auto-applies writes after plan approval. Those cards stay
+      // action=proposed; stamping them cancelled on recap is a false Cancelled.
+      const diffOutcome = isPlanDocumentResult(msg, msg.text) ? "confirmed" : "cancelled";
       if (liveResultTsRef.current !== null) {
         const liveTs = liveResultTsRef.current;
         liveResultTsRef.current = null;
@@ -506,12 +515,13 @@ export const useAgent = () => {
                 ? { ...m, text: msg.text, elapsed: msg.elapsed, _streaming: false }
                 : m,
             ),
-            "cancelled",
+            diffOutcome,
+            { all: diffOutcome === "confirmed" },
           ),
         );
       } else {
         setMessages((prev) => [
-          ...stampFileDiffOutcome(prev, "cancelled"),
+          ...stampFileDiffOutcome(prev, diffOutcome, { all: diffOutcome === "confirmed" }),
           resultFromAgentPayload({
             ...msg,
             _ts: `${Date.now()}-${++msgSeqRef.current}`,
@@ -587,7 +597,7 @@ export const useAgent = () => {
         iteration: msg.iteration,
         maxIterations: msg.max_iterations,
         phase: "iterating",
-        detail: null,
+        detail: msg.detail || null,
         elapsed: msg.elapsed,
       });
     };
@@ -1577,7 +1587,7 @@ export const useAgent = () => {
   };
 };
 
-function stampFileDiffOutcome(messages, outcome) {
+function stampFileDiffOutcome(messages, outcome, { all = false } = {}) {
   const next = messages.slice();
   for (let i = next.length - 1; i >= 0; i--) {
     if (
@@ -1586,7 +1596,7 @@ function stampFileDiffOutcome(messages, outcome) {
       isPendingFileDiff(next[i], { liveConfirm: true })
     ) {
       next[i] = { ...next[i], outcome };
-      break;
+      if (!all) break;
     }
   }
   return next;
@@ -1632,7 +1642,7 @@ function pendingConfirmFromRestored(restored) {
   let pending = null;
   for (const m of restored) {
     if (m.type === "confirm_prompt" && m.requestId) {
-      pending = { requestId: m.requestId, prompt: m.prompt };
+      pending = { requestId: m.requestId, prompt: m.prompt, kind: m.kind };
     }
     if (
       m.type === "confirm_answer" ||
@@ -1708,8 +1718,8 @@ const restoreMessages = (dbMessages) => {
         });
         break;
 
-      case "file_diff":
-        restored.push({
+      case "file_diff": {
+        const card = {
           type: "file_diff",
           tool: meta.tool,
           action: meta.action,
@@ -1721,14 +1731,19 @@ const restoreMessages = (dbMessages) => {
           deletions: meta.deletions,
           diff_text: meta.diff_text,
           _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
-        });
+        };
+        const merged = upsertFileDiffMessage(restored, card);
+        restored.length = 0;
+        restored.push(...merged);
         break;
+      }
 
       case "confirm_prompt":
         restored.push({
           type: "confirm_prompt",
           requestId: meta.request_id,
           prompt: meta.prompt || msg.content || "",
+          kind: meta.kind || "",
           _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
         });
         break;
@@ -1993,5 +2008,11 @@ const restoreMessages = (dbMessages) => {
     }
   }
 
+  const hasBuildRecap = restored.some(
+    (m) => m.type === "plan_document" && (m.text || "").includes("# Build recap"),
+  );
+  if (hasBuildRecap) {
+    return stampFileDiffOutcome(restored, "confirmed", { all: true });
+  }
   return restored;
 };

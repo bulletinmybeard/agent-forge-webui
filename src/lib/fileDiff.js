@@ -87,3 +87,22 @@ export function displayFileDiffPath(path) {
   if (!path) return "";
   return path;
 }
+
+/** Replace a pending proposed card for the same path with a write/edit receipt. */
+export function upsertFileDiffMessage(messages, card) {
+  const list = messages || [];
+  if (!card || card.type !== "file_diff") {
+    return [...list, card];
+  }
+  if (card.action && card.action !== "proposed" && card.path) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const m = list[i];
+      if (m.type === "file_diff" && m.path === card.path && isPendingFileDiff(m)) {
+        const next = list.slice();
+        next[i] = { ...m, ...card, _ts: m._ts };
+        return next;
+      }
+    }
+  }
+  return [...list, card];
+}

@@ -467,7 +467,12 @@ export default function ChatView({
           />
           {confirm && (
             <div className="shrink-0 px-4 pb-2 max-w-6xl w-full mx-auto">
-              <ConfirmDialog type="confirm_prompt" prompt={confirm.prompt} onConfirm={onConfirm} />
+              <ConfirmDialog
+                type="confirm_prompt"
+                prompt={confirm.prompt}
+                kind={confirm.kind}
+                onConfirm={onConfirm}
+              />
             </div>
           )}
           {secret && (

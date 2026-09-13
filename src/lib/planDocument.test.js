@@ -39,7 +39,11 @@ assert(parsed.tasks.length === 2, "two tasks");
 assert(parsed.tasks[0].id === "T1", "T1 id");
 assert(parsed.tasks[1].files.join(",") === "test_uni.py,uni_v1.py", "T2 files");
 
-const recap = parsePlanDocument("# Build recap\n\nDone.\n");
+const recap = parsePlanDocument(
+  "# Build recap\n\n## T1 — Do the thing\nBlocked: nope\n",
+);
 assert(recap.kind === "build", "build recap kind");
+assert(recap.tasks.length === 1, "recap ## T1 parsed");
+assert(recap.tasks[0].title === "Do the thing", "recap task title");
 
 console.log("planDocument.test.js ok");

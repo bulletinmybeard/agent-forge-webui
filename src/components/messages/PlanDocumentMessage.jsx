@@ -59,6 +59,22 @@ export default function PlanDocumentMessage({ text, planPath, planTarget, elapse
         <div className="px-3 py-2 text-sm text-gray-200 border-b border-stone-800/60">{parsed.goal}</div>
       )}
 
+      {parsed.findings?.length > 0 && (
+        <div className="px-3 py-2 border-b border-stone-800/60">
+          <div className="text-[10px] uppercase tracking-wide text-stone-500 mb-1">Findings</div>
+          <ul className="space-y-1 text-xs text-gray-400">
+            {parsed.findings.slice(0, 8).map((f, i) => (
+              <li key={i} className="leading-snug">
+                {f}
+              </li>
+            ))}
+            {parsed.findings.length > 8 && (
+              <li className="text-gray-600">+{parsed.findings.length - 8} more in markdown</li>
+            )}
+          </ul>
+        </div>
+      )}
+
       {parsed.tasks.length > 0 && (
         <div className="divide-y divide-stone-800/50">
           {parsed.tasks.map((task) => (
@@ -87,15 +103,15 @@ export default function PlanDocumentMessage({ text, planPath, planTarget, elapse
         </button>
       </div>
 
-      {showMarkdown && parsed.body && (
-        <div className="px-3 py-2 border-t border-stone-800/60 text-sm">
-          <MarkdownContent content={parsed.body} />
+      {showMarkdown && (text || parsed.body) && (
+        <div className="px-3 py-2 border-t border-stone-800/60 text-sm markdown-content">
+          <MarkdownContent>{text || parsed.body}</MarkdownContent>
         </div>
       )}
 
-      {!parsed.tasks.length && !parsed.goal && parsed.body && !showMarkdown && (
-        <div className="px-3 py-2 text-sm">
-          <MarkdownContent content={parsed.body} />
+      {!parsed.tasks.length && !parsed.goal && (text || parsed.body) && !showMarkdown && (
+        <div className="px-3 py-2 text-sm markdown-content">
+          <MarkdownContent>{text || parsed.body}</MarkdownContent>
         </div>
       )}
     </div>

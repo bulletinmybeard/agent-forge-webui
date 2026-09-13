@@ -2,7 +2,7 @@
  * Parse @plan markdown (frontmatter + ### T1 — tasks) for the plan card.
  */
 
-const TASK_RE = /^###\s+(T\d+)\s*[—\-–:]\s*(.+)$/gm;
+const TASK_RE = /^#{2,3}\s+(T\d+)\s*[—\-–:]\s*(.+)$/gm;
 const FILES_RE = /^\s*[-*]\s*Files?:\s*(.+)$/im;
 const GOAL_RE = /\*\*Goal:\*\*\s*(.+)/i;
 
@@ -35,6 +35,13 @@ export function parsePlanDocument(text) {
   }
 
   const goalMatch = rest.match(GOAL_RE);
+  const findingsBlock = rest.match(/## Findings\n([\s\S]*?)(?=\n## |\n### |$)/i);
+  const findings = findingsBlock
+    ? findingsBlock[1]
+        .split("\n")
+        .map((l) => l.replace(/^\s*[-*]\s*/, "").trim())
+        .filter(Boolean)
+    : [];
   const tasks = [];
   const matches = [...rest.matchAll(TASK_RE)];
   for (let i = 0; i < matches.length; i++) {
@@ -62,6 +69,7 @@ export function parsePlanDocument(text) {
     branch: meta.branch || "",
     created: meta.created || "",
     goal: goalMatch ? goalMatch[1].trim() : "",
+    findings,
     tasks,
     body: rest.trim(),
   };

@@ -4,6 +4,7 @@ export default function ConfirmDialog({
   confirmed,
   autoAccepted,
   timedOut,
+  kind,
   onConfirm,
 }) {
   if (type === "confirm_answer") {
@@ -50,7 +51,7 @@ export default function ConfirmDialog({
             className="px-3 py-1 text-xs font-medium text-gray-300 bg-gray-800 border border-gray-700
                        rounded hover:bg-gray-700 transition-colors"
           >
-            No
+            {kind === "plan" ? "Keep drafting" : "No"}
           </button>
           <button
             type="button"
@@ -58,17 +59,19 @@ export default function ConfirmDialog({
             className="px-3 py-1 text-xs font-medium text-white bg-amber-600
                        rounded hover:bg-amber-500 transition-colors"
           >
-            This time
+            {kind === "plan" ? "Approve" : "This time"}
           </button>
-          <button
-            type="button"
-            onClick={() => onConfirm(true, { autoAccept: true })}
-            className="px-3 py-1 text-xs font-medium text-amber-200 bg-amber-800
-                       rounded hover:bg-amber-700 transition-colors"
-            title="Auto-confirm remaining writes in this chat session"
-          >
-            This session
-          </button>
+          {kind !== "plan" && (
+            <button
+              type="button"
+              onClick={() => onConfirm(true, { autoAccept: true })}
+              className="px-3 py-1 text-xs font-medium text-amber-200 bg-amber-800
+                         rounded hover:bg-amber-700 transition-colors"
+              title="Auto-confirm remaining writes in this chat session"
+            >
+              This session
+            </button>
+          )}
         </div>
       </div>
     </div>
