@@ -81,39 +81,6 @@ Flags:
 
 Defaults come from `deploy-web.local.env` (optional: copy `deploy-web.local.env.example`): `WEB_PORT` (default `8400`) and `AGENT_BACKEND` (default `http://host.docker.internal:8200`).
 
-## Screenshots
-
-<table>
-  <tr valign="top">
-    <td width="50%">
-      <a href=".github/assets/agent-forge-web-ui-prompt-demo-1.png">
-        <img
-          src=".github/assets/agent-forge-web-ui-prompt-demo-1.png"
-          width="100%"
-          height="420"
-          alt="AgentForge WebUI running an @search query comparing HTTP/2 and HTTP/3"
-        >
-      </a>
-    </td>
-    <td width="50%">
-      <a href=".github/assets/agent-forge-web-ui-prompt-demo-2.png">
-        <img
-          src=".github/assets/agent-forge-web-ui-prompt-demo-2.png"
-          width="100%"
-          height="420"
-          alt="AgentForge WebUI answering an @search for the highest-rated sci-fi movies released between 2021 and 2025"
-        >
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><em>Web search: routing, a tool call, and a sourced answer with a summary table</em></td>
-    <td align="center"><em>A date-range run: ranked, sourced results plus a note on what it excluded as out of range</em></td>
-  </tr>
-</table>
-
-More demo screenshots: [mode picker](.github/assets/agent-forge-web-ui-chat-mode-selector-popover.png) · [provider selector](.github/assets/agent-forge-web-ui-chat-llm-provider-selector-popover.png) · [skills](.github/assets/agent-forge-web-ui-chat-skills-popover.png) · [connectors](.github/assets/agent-forge-web-ui-connectors-modal.png) · [bookmarks](.github/assets/agent-forge-web-ui-bookmarks-modal.png) · [memory](.github/assets/agent-forge-web-ui-memory-modal.png) · [profile overrides](.github/assets/agent-forge-web-ui-model-profile-overrides-modal.png) · [attachments](.github/assets/agent-forge-web-ui-attachments.png) · [private session](.github/assets/agent-forge-web-ui-private-session.png) · [help](.github/assets/agent-forge-web-ui-agent-forge-help-modal.png) · [command permissions](.github/assets/agent-forge-web-ui-command-permissions.png)
-
 ## Pre-release code review
 
 The changes for the current unreleased version were reviewed by **Claude Opus 5** (Anthropic), run through [Claude Code](https://claude.com/claude-code), on 2026-10-24.
