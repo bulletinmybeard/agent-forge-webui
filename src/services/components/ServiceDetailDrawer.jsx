@@ -3,9 +3,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const LOG_LINE_PRESETS = [100, 200, 500, 1000];
 const LIVE_TAIL_MAX_LINES = 2000;
 
+// Containers that serve this dashboard. Restarting one from here kills the page
+// mid-request, so the restart button stays disabled for them. Add the service
+// name your deployment uses; the compose service name is what the API reports.
+const SELF_CONTAINERS = ["agentforge-web-ui"];
+
 const isSelfRestartBlocked = (service) => {
   const name = (service?.name || service?.service || "").toLowerCase();
-  return name.includes("scout-web");
+  return SELF_CONTAINERS.some((self) => name.includes(self));
 };
 
 export default function ServiceDetailDrawer({ service, onClose, fetchLogs, restartService }) {
@@ -149,7 +154,7 @@ export default function ServiceDetailDrawer({ service, onClose, fetchLogs, resta
             `}
             title={
               selfBlocked
-                ? "Refusing to restart scout-web from the dashboard — use the deploy script"
+                ? "Refusing to restart the container serving this dashboard — use the deploy script"
                 : restarting
                   ? "Restart in progress…"
                   : "Restart this container (confirm required)"

@@ -22,6 +22,25 @@
   background: #4b5563;
 }
 
+/* Composer text is invisible so the highlight layer can draw `inline code`.
+   The caret and the placeholder stay visible. */
+.prompt-input {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: #f3f4f6;
+}
+.prompt-input::placeholder {
+  color: #6b7280;
+  -webkit-text-fill-color: #6b7280;
+}
+.prompt-input::selection {
+  background: rgba(99, 102, 241, 0.35);
+  -webkit-text-fill-color: transparent;
+}
+.prompt-highlight::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
 .prose code::before,
 .prose code::after {
   content: none;

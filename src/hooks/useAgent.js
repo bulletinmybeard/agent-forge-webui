@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { v7 as uuidv7 } from "uuid";
 import { isPendingFileDiff, upsertFileDiffMessage } from "../lib/fileDiff";
 import { isPlanAwaitingApproval, isPlanDocumentResult } from "../lib/planDocument";
+import { adoptPolledTurn } from "../lib/polledTurn";
 import ws from "../lib/ws";
 import useRecap from "./useRecap";
 
@@ -16,7 +17,7 @@ export const useAgent = () => {
   const [secret, setSecret] = useState(null);
   const [sessionInfo, setSessionInfo] = useState({});
   const [sessionTitle, setSessionTitle] = useState("");
-  const [_historyLoaded, setHistoryLoaded] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [contextUsage, setContextUsage] = useState(null);
   const [agentStatus, setAgentStatus] = useState(null);
   const [activeMode, setActiveMode] = useState(null);
@@ -27,7 +28,7 @@ export const useAgent = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     () =>
       typeof window !== "undefined" &&
-      localStorage.getItem("scout_notifications") === "on" &&
+      localStorage.getItem("agentforge:notifications") === "on" &&
       typeof Notification !== "undefined" &&
       Notification.permission === "granted",
   );
@@ -40,7 +41,7 @@ export const useAgent = () => {
   const toggleNotifications = useCallback(async () => {
     if (notificationsEnabled) {
       setNotificationsEnabled(false);
-      localStorage.setItem("scout_notifications", "off");
+      localStorage.setItem("agentforge:notifications", "off");
       return;
     }
     if (typeof Notification === "undefined") return;
@@ -48,7 +49,7 @@ export const useAgent = () => {
       Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
     if (perm === "granted") {
       setNotificationsEnabled(true);
-      localStorage.setItem("scout_notifications", "on");
+      localStorage.setItem("agentforge:notifications", "on");
     }
   }, [notificationsEnabled]);
 
@@ -556,7 +557,11 @@ export const useAgent = () => {
         const tools = msg.tool_calls ? `${msg.tool_calls} tool calls` : "";
         const body = [elapsed, tools].filter(Boolean).join(" · ") || "Run complete";
         try {
-          new Notification("ScoutIX", { body, icon: "/favicon.ico", tag: "scout-run-done" });
+          new Notification("AgentForge", {
+            body,
+            icon: "/favicon.ico",
+            tag: "agentforge-run-done",
+          });
         } catch (_) {
           /* ignore */
         }
@@ -1505,9 +1510,9 @@ export const useAgent = () => {
 
   useRecap({ sessionId, running, messages, confirm, secret, onRecap: handleRecap });
 
-  // Worker persists confirm_prompt / file.diff even when the live WS event
-  // is dropped. While a run is waiting on Yes/No, poll the newest messages
-  // so the confirm bar still appears.
+  // SQLite already has the answer when a chat WebSocket drops agent.result.
+  // While a run is in progress, poll the newest messages: confirm prompts and
+  // file diffs if the run is still going, or the finished turn if it is not.
   useEffect(() => {
     if (!running || confirm) return;
     const sid = sessionIdRef.current;
@@ -1523,7 +1528,19 @@ export const useAgent = () => {
           const restored = restoreMessages(dbMessages);
           const pending = pendingConfirmFromRestored(restored);
           if (pending) setConfirm(pending);
-          setMessages((prev) => mergeRestoredTail(prev, restored));
+          setMessages((prev) => {
+            const adopted = adoptPolledTurn(prev, restored, mergeRestoredTail);
+            if (adopted.done) {
+              queueMicrotask(() => {
+                if (cancelled) return;
+                setAgentStatus(null);
+                setRunningTracked(false);
+                liveResultTsRef.current = null;
+                liveToolCallsTsRef.current = null;
+              });
+            }
+            return adopted.messages;
+          });
         })
         .catch(() => {});
     };
@@ -1534,12 +1551,13 @@ export const useAgent = () => {
       cancelled = true;
       clearInterval(id);
     };
-  }, [running, confirm]);
+  }, [running, confirm, setRunningTracked]);
 
   return {
     connected,
     sessionId,
     messages,
+    historyLoaded,
     running,
     confirm,
     secret,

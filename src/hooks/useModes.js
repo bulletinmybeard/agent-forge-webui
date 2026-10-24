@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { customModesExceptBuiltins } from "../lib/customModes";
 
 const BASE_MODES = [
   {
@@ -72,6 +73,15 @@ const BASE_MODES = [
     desc: "Multi-area system discovery",
     dot: "bg-teal-500",
     text: "text-teal-400",
+  },
+  {
+    id: "film",
+    label: "Film",
+    prefix: "@film ",
+    aliases: "@film, @movie, @movies",
+    desc: "Movies and TV — TMDB lookup, library, recommend",
+    dot: "bg-rose-400",
+    text: "text-rose-300",
   },
   {
     id: "search",
@@ -201,53 +211,9 @@ const BASE_MODES = [
   },
 ];
 
-const BASE_IDS = new Set(BASE_MODES.map((m) => m.id));
-const DEFAULT_COLOR = { dot: "bg-gray-500", text: "text-gray-400" };
-const ACRONYMS = new Set(["api", "sql"]);
-
-const CUSTOM_PALETTE = [
-  { dot: "bg-cyan-500", text: "text-cyan-400" },
-  { dot: "bg-blue-500", text: "text-blue-400" },
-  { dot: "bg-sky-500", text: "text-sky-400" },
-  { dot: "bg-teal-500", text: "text-teal-400" },
-  { dot: "bg-emerald-500", text: "text-emerald-400" },
-  { dot: "bg-lime-500", text: "text-lime-400" },
-  { dot: "bg-amber-500", text: "text-amber-400" },
-  { dot: "bg-orange-500", text: "text-orange-400" },
-  { dot: "bg-rose-500", text: "text-rose-400" },
-  { dot: "bg-pink-500", text: "text-pink-400" },
-  { dot: "bg-fuchsia-500", text: "text-fuchsia-400" },
-  { dot: "bg-purple-500", text: "text-purple-400" },
-  { dot: "bg-violet-500", text: "text-violet-400" },
-  { dot: "bg-indigo-500", text: "text-indigo-400" },
-];
-
-const colorForCustom = (id) => {
-  if (!id) return DEFAULT_COLOR;
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return CUSTOM_PALETTE[Math.abs(h) % CUSTOM_PALETTE.length];
-};
-
-const titleCase = (word) =>
-  ACRONYMS.has(word) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1);
-
-const deriveCustom = (agent) => {
-  const aliases = Array.isArray(agent.aliases) ? agent.aliases : [];
-  const first = aliases[0] || `@${agent.id}`;
-  return {
-    id: agent.id,
-    label: titleCase(first.replace(/^@/, "")),
-    prefix: `${first} `,
-    aliases: aliases.join(", "),
-    desc: (agent.description || "").split(". ")[0].slice(0, 80),
-    connector: agent.source === "connector",
-    ...colorForCustom(agent.id),
-  };
-};
-
 export default function useModes() {
   const [modes, setModes] = useState(BASE_MODES);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -255,16 +221,17 @@ export default function useModes() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled || !data?.agents) return;
-        const extra = data.agents
-          .filter((a) => a.type === "custom" && !BASE_IDS.has(a.id))
-          .map(deriveCustom);
+        const extra = customModesExceptBuiltins(data.agents, BASE_MODES);
         if (extra.length > 0) setModes([...BASE_MODES, ...extra]);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setReady(true);
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  return modes;
+  return { modes, ready };
 }
