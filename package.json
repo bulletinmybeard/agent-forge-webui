@@ -29,22 +29,22 @@
     "@monaco-editor/react": "^4.7.0",
     "highlight.js": "^11.12.0",
     "lowlight": "^3.3.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.18.3",
+    "react-router-dom": "^7.18.4",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
-    "uuid": "^14.0.2"
+    "uuid": "^14.0.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.11",
+    "@biomejs/biome": "^2.6.2",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/typography": "^0.5.20",
-    "@vitejs/plugin-react": "^6.1.1",
-    "autoprefixer": "^10.5.4",
-    "postcss": "^8.5.26",
+    "@vitejs/plugin-react": "^6.1.2",
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.31",
     "tailwindcss": "^4.3.2",
-    "vite": "^8.2.2"
+    "vite": "^8.3.5"
   }
 }
