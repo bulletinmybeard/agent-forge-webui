@@ -40,7 +40,7 @@ It's a pure frontend: it streams the agent's think > act > observe loop over the
 
 Prerequisites:
 - **Node 20.19+** (`engines` in `package.json`)
-- A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.16.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.16.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
+- A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.17.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
 
 ```bash
 npm install
