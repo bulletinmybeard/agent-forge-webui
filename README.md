@@ -4,7 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Vite](https://img.shields.io/badge/Vite-8-646cff.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Biome](https://img.shields.io/badge/lint%2Fformat-Biome-60a5fa.svg?logo=biome&logoColor=white)](https://biomejs.dev/)
-[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.16.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.16.0)
+[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.17.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0)
+[![Code review: Claude Opus 5](https://img.shields.io/badge/code%20review-Claude%20Opus%205-D97757?logo=claude&logoColor=white)](#pre-release-code-review)
 
 > [!NOTE]
 > **Experimental!**
@@ -15,13 +16,13 @@ AgentForge WebUI is a React SPA for [AgentForge](https://github.com/bulletinmybe
 It's a pure frontend: it streams the agent's think > act > observe loop over the backend's `/ws/chat` WebSocket and calls its REST API for sessions, uploads, memory, and configs. It does nothing on its own — a running AgentForge backend is required!
 
 > [!IMPORTANT]
-> **Backend version:** this WebUI needs [AgentForge **v0.16.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.16.0) or newer.
-> **`@plan` / `@build`** (plan card, Approve/Keep drafting, file-diff receipts, undo/`run.idle`) come from that release. **`@trip` maps**, session `overrides.profiles`, and Memory Settings `schema_tool_available` are from v0.15.0. **Recap** (`/api/sessions/{id}/recap`) is from v0.14.0. The **Command Permissions** modal depends on v0.13.0. Older backends will fail those endpoints (e.g., 404).
+> **Backend version:** this WebUI needs [AgentForge **v0.17.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0) or newer.
+> **`@film`** (`@movie` / `@movies`: TMDB lookup, local `film_db` library, recommend-similar) comes from that release. **`@plan` / `@build`** (plan card, Approve/Keep drafting, file-diff receipts, undo/`run.idle`) are from v0.16.0. **`@trip` maps**, session `overrides.profiles`, and Memory Settings `schema_tool_available` are from v0.15.0. **Recap** (`/api/sessions/{id}/recap`) is from v0.14.0. The **Command Permissions** modal depends on v0.13.0. Older backends will fail those endpoints (e.g., 404).
 
 ## Features
 
 - Streaming chat over the `/ws/chat` WebSocket, with the full think > act > observe event stream rendered live
-- Mode picker for the `@mode` prefixes (chat, docs, search, agent, sql, logs, discover, pipeline, review, research, coding, plan, build, scheduler, monitor, connectors, and custom agents including `@trip`), each with its own colour. Mode and profile overrides are per-session; new chats start clean
+- Mode picker for the `@mode` prefixes (chat, docs, search, agent, sql, logs, discover, pipeline, review, research, coding, plan, build, film, scheduler, monitor, connectors, and custom agents including `@trip`), each with its own colour. Mode and profile overrides are per-session; new chats start clean
 - Per-event message cards: routing, config, tool calls, confirm + secret dialogs, results, summaries, errors, search metadata, discovery, research, scheduler/monitor jobs, file diffs, agent warning/recovery/retry/escalation, model fallback, and session compaction
 - **Command Permissions** modal: manage shell/SSH allowlist, denylist, and confirm policy (runtime overrides on the AgentForge backend), plus named **profiles** (YAML baseline, blank slate, builtins `tight`/`open`, save-as / delete user profiles)
 - Connectors UI: connect and manage multi-account Google (Gmail, Drive, BigQuery, YouTube), GitLab, and GitHub connections, with per-connection product/permission display and an in-place read/write toggle
@@ -80,38 +81,13 @@ Flags:
 
 Defaults come from `deploy-web.local.env` (optional: copy `deploy-web.local.env.example`): `WEB_PORT` (default `8400`) and `AGENT_BACKEND` (default `http://host.docker.internal:8200`).
 
-## Screenshots
+## Pre-release code review
 
-<table>
-  <tr valign="top">
-    <td width="50%">
-      <a href=".github/assets/agent-forge-web-ui-prompt-demo-1.png">
-        <img
-          src=".github/assets/agent-forge-web-ui-prompt-demo-1.png"
-          width="100%"
-          height="420"
-          alt="AgentForge WebUI running an @search query comparing HTTP/2 and HTTP/3"
-        >
-      </a>
-    </td>
-    <td width="50%">
-      <a href=".github/assets/agent-forge-web-ui-prompt-demo-2.png">
-        <img
-          src=".github/assets/agent-forge-web-ui-prompt-demo-2.png"
-          width="100%"
-          height="420"
-          alt="AgentForge WebUI answering an @search for the highest-rated sci-fi movies released between 2021 and 2025"
-        >
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><em>Web search: routing, a tool call, and a sourced answer with a summary table</em></td>
-    <td align="center"><em>A date-range run: ranked, sourced results plus a note on what it excluded as out of range</em></td>
-  </tr>
-</table>
+The changes for the current unreleased version were reviewed by **Claude Opus 5** (Anthropic), run through [Claude Code](https://claude.com/claude-code), on 2026-10-24.
 
-More demo screenshots: [mode picker](.github/assets/agent-forge-web-ui-chat-mode-selector-popover.png) · [provider selector](.github/assets/agent-forge-web-ui-chat-llm-provider-selector-popover.png) · [skills](.github/assets/agent-forge-web-ui-chat-skills-popover.png) · [connectors](.github/assets/agent-forge-web-ui-connectors-modal.png) · [bookmarks](.github/assets/agent-forge-web-ui-bookmarks-modal.png) · [memory](.github/assets/agent-forge-web-ui-memory-modal.png) · [profile overrides](.github/assets/agent-forge-web-ui-model-profile-overrides-modal.png) · [attachments](.github/assets/agent-forge-web-ui-attachments.png) · [private session](.github/assets/agent-forge-web-ui-private-session.png) · [help](.github/assets/agent-forge-web-ui-agent-forge-help-modal.png) · [command permissions](.github/assets/agent-forge-web-ui-command-permissions.png)
+Scope was the diff for that release, not the whole codebase: dead code, the new picker and composer surfaces, lint and format conformance, the standalone test scripts, and whether the README and CHANGELOG matched what shipped. What came out of it is in the [CHANGELOG](CHANGELOG.md).
+
+This is one review pass by one model on one diff, not an audit or a security guarantee — see the note at the top of this README about what AgentForge WebUI is. Findings were verified and fixed by hand before release.
 
 ## License
 

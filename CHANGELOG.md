@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-24
+
+Needs [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[≥ 0.17.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0)** for `@film` / `@movie` / `@movies`: TMDB lookup, the local `film_db` library, and recommend-similar.
+
+### Added
+
+- Mode chip **Film** (`@film`, `@movie`, `@movies`) for TMDB lookup, local library, and recommend
+- Mode picker popover: search across ids, aliases, labels, group names, and descriptions with a subsequence fallback, grouped sections, arrow/Enter navigation, and a recent-modes list in `localStorage`
+- Custom agents from `/api/agents` show up as picker rows, skipping any `@alias` a built-in mode already owns
+- Inline code highlighting in the composer: a `` `backticked` `` span renders boxed while the ticks stay in the stored prompt, so the caret keeps lining up
+- Per-session mode memory: an existing chat reopens in the mode its transcript ran, a new chat starts at `chat`, and an unsent prompt keeps the mode it was drafted with
+- Test scripts for the picker, inline code, session mode, polled turns, summary tools, and custom modes — run one with `node src/lib/<name>.test.js`
+
+### Changed
+
+- Move custom-agent row derivation out of `useModes` into `src/lib/customModes.js`, and the picker UI out of `ChatInput` into `ModeSelector`
+- Title the run-complete browser notification **AgentForge** and move the notification preference to `agentforge:notifications` (notifications need enabling once more)
+
+### Fixed
+
+- A chat whose WebSocket dropped `agent.result` sat on the spinner until reload. The running-state poll now adopts the finished turn from SQLite instead of keeping only confirms and file diffs
+- Run-footer tool histogram walked characters when an older `@review` / `@research` summary stored its tool list as a comma-separated string
+- The service drawer's self-restart guard matched a container name no deployment uses, so the dashboard offered to restart the container serving it
+
 ## [0.6.0] - 2026-09-13
 
 Needs [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[≥ 0.16.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.16.0)** for `@plan` / `@build`, plan-gate confirms (`kind=plan`), `file.diff` write receipts, and `run.idle` after worker jobs.

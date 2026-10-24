@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { formatElapsed } from "../../lib/formatTime";
+import { legacyToolList, toolCountEntries } from "../../lib/summaryTools";
 
 const formatTsTime = (ts) => {
   if (!ts) return "";
@@ -27,9 +28,10 @@ export default function SummaryMessage({
   _ts,
   onRerun,
 }) {
-  const toolEntries = Object.entries(tools || {}).sort(([, a], [, b]) => b - a);
+  const toolEntries = toolCountEntries(tools);
+  const legacyTools = legacyToolList(tools);
   const timeStr = useMemo(() => formatTsTime(_ts), [_ts]);
-  const showRerun = onRerun && Object.keys(tools || {}).some((t) => RERUNNABLE_TOOLS.has(t));
+  const showRerun = onRerun && toolEntries.some(([name]) => RERUNNABLE_TOOLS.has(name));
 
   return (
     <div className="px-3 py-2 text-xs text-gray-500 space-y-1">
@@ -76,6 +78,7 @@ export default function SummaryMessage({
           ))}
         </div>
       )}
+      {legacyTools && <div className="text-gray-600">{legacyTools}</div>}
       {Array.isArray(models) && models.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap text-gray-600">
           <span className="text-gray-500">Models:</span>

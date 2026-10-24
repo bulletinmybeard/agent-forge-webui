@@ -3,10 +3,16 @@ import { useParams, useSearchParams } from "react-router-dom";
 import ConnectorsModal from "../connectors/components/ConnectorsModal";
 import { useCanvas } from "../hooks/useCanvas";
 import useModes from "../hooks/useModes";
+import {
+  detectModeFromMessages,
+  initialPickerMode,
+  MODE_DRAFT_KEY,
+  sessionIdFromPath,
+} from "../lib/sessionMode";
 import BookmarksModal from "./BookmarksModal";
 import { CanvasPanel } from "./CanvasPanel";
 import { CanvasTab } from "./CanvasTab";
-import ChatInput from "./ChatInput";
+import ChatInput, { PROMPT_DRAFT_KEY } from "./ChatInput";
 import CommandPermissionsModal from "./CommandPermissionsModal";
 import MemorySettings from "./MemorySettings";
 import MessageList from "./MessageList";
@@ -45,7 +51,7 @@ const WelcomeGreeting = () => {
 // Per-session only — new chats must not inherit the previous mode/overrides.
 const MODE_PREFIX = "agentforge:mode:";
 const PROFILE_OVERRIDES_PREFIX = "agentforge:profile-overrides:";
-// Legacy global key (pre per-session mode draft) — cleared on write.
+// Old global key. Cleared on write. The unsent-prompt mode is MODE_DRAFT_KEY.
 const MODE_DRAFT_LEGACY_KEY = "agentforge:mode-draft";
 const PROFILE_OVERRIDES_PENDING_LEGACY = `${PROFILE_OVERRIDES_PREFIX}pending`;
 
@@ -106,29 +112,21 @@ const writeProfileOverrides = (sessionId, overrides) => {
   }
 };
 
-const detectModeFromMessages = (messages, aliasToMode) => {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i];
-    if (msg.type === "routed" && msg.reason) {
-      const match = msg.reason.match(/^@(\w+)/);
-      if (match) {
-        const alias = match[1].toLowerCase();
-        if (aliasToMode[alias]) return aliasToMode[alias];
-      }
-      const p = (msg.profile || "").toLowerCase();
-      if (p === "sql") return "sql";
-      if (p === "discovery") return "discover";
-      if (p === "review") return "review";
-      if (p === "builder") {
-        const r = (msg.reason || "").toLowerCase();
-        return r.startsWith("build") ? "build" : "plan";
-      }
-      if (p === "plan") return "plan";
-      if (p === "build") return "build";
-      if (p.includes("web-search")) return "web";
-    }
+const storageGet = (key) => {
+  try {
+    return localStorage.getItem(key) || "";
+  } catch {
+    return "";
   }
-  return null;
+};
+
+const writeModeDraft = (modeId) => {
+  if (!modeId) return;
+  try {
+    localStorage.setItem(MODE_DRAFT_KEY, modeId);
+  } catch {
+    /* private mode / quota */
+  }
 };
 
 export default function ChatView({
@@ -137,6 +135,7 @@ export default function ChatView({
   running,
   confirm,
   secret,
+  historyLoaded = false,
   onSendQuery,
   onConfirm,
   onSecret,
@@ -189,7 +188,7 @@ export default function ChatView({
 }) {
   const isEmpty = messages.length === 0 && !running;
 
-  const modes = useModes();
+  const { modes, ready: modesReady } = useModes();
   const validModeIds = useMemo(() => new Set(modes.map((m) => m.id)), [modes]);
   const modePrefixes = useMemo(
     () => Object.fromEntries(modes.map((m) => [m.id, m.prefix])),
@@ -199,6 +198,7 @@ export default function ChatView({
     const map = {};
     for (const mode of modes) {
       map[mode.id] = mode.id;
+      map[mode.id.toLowerCase()] = mode.id;
       const tokens = (mode.aliases || "").match(/@(\w+)/g) || [];
       for (const token of tokens) {
         const alias = token.slice(1).toLowerCase();
@@ -218,78 +218,79 @@ export default function ChatView({
     return param && validModeIds.has(param) ? param : null;
   }, [searchParams, validModeIds]);
 
-  // Always start at chat; session/url effects set the real value.
-  const [selectedMode, setSelectedMode] = useState("chat");
+  // Unsent prompt keeps the mode that was picked with it. Otherwise use the
+  // mode stored for this session. Chat is the new-chat default.
+  const [selectedMode, setSelectedMode] = useState(() =>
+    initialPickerMode({
+      sessionId,
+      promptDraft: storageGet(PROMPT_DRAFT_KEY),
+      modeDraft: storageGet(MODE_DRAFT_KEY),
+      sessionMode: readSessionMode(sessionId),
+    }),
+  );
   const selectedModeRef = useRef(selectedMode);
   selectedModeRef.current = selectedMode;
-  const modeLoadedForRef = useRef(null);
+  // A manual pick sticks. Route cards must not pull the picker back.
+  const modeTouchedRef = useRef(false);
+  const seenSessionRef = useRef(sessionId || "__new__");
+  const skipModePersistRef = useRef(true);
 
-  // Per-session mode restore. New chat (no sessionId) → always "chat".
-  // When the first message assigns a session id, keep the mode the user
-  // already picked on the blank new-chat screen (don't snap back to chat).
+  const selectMode = (id) => {
+    modeTouchedRef.current = true;
+    setSelectedMode(id);
+  };
+
   useEffect(() => {
     const key = sessionId || "__new__";
-    if (modeLoadedForRef.current === key) return;
-    const prevKey = modeLoadedForRef.current;
-    modeLoadedForRef.current = key;
+    if (seenSessionRef.current === key) return;
+    const prevKey = seenSessionRef.current;
+    seenSessionRef.current = key;
+    modeTouchedRef.current = false;
+    skipModePersistRef.current = true;
 
     if (urlMode) {
       setSelectedMode(urlMode);
       return;
     }
-    if (!sessionId) {
-      setSelectedMode("chat");
-      return;
-    }
-    if (prevKey === "__new__") {
+    if (prevKey === "__new__" && sessionId) {
       writeSessionMode(sessionId, selectedModeRef.current);
+      writeModeDraft(selectedModeRef.current);
       return;
     }
-    setSelectedMode(readSessionMode(sessionId));
+    const drafted = storageGet(PROMPT_DRAFT_KEY) ? storageGet(MODE_DRAFT_KEY) : "";
+    setSelectedMode(drafted || (sessionId ? readSessionMode(sessionId) : "chat"));
   }, [sessionId, urlMode]);
 
-  // URL mode always wins when present (including mid-session param changes).
   useEffect(() => {
     if (urlMode) setSelectedMode(urlMode);
   }, [urlMode]);
 
-  // Drop a stale mode id once the modes list is known (async load).
   useEffect(() => {
-    if (urlMode) return;
+    if (urlMode || !modesReady) return;
     if (validModeIds.size > 0 && !validModeIds.has(selectedMode)) {
       setSelectedMode("chat");
     }
-  }, [validModeIds, selectedMode, urlMode]);
+  }, [modesReady, validModeIds, selectedMode, urlMode]);
 
-  // Persist mode only for an existing session (reload same chat keeps pick).
   useEffect(() => {
+    if (skipModePersistRef.current) {
+      skipModePersistRef.current = false;
+      return;
+    }
+    writeModeDraft(selectedMode);
     if (!sessionId || urlMode) return;
     writeSessionMode(sessionId, selectedMode);
   }, [sessionId, selectedMode, urlMode]);
 
-  // Existing session with history: prefer mode inferred from last route.
-  const modeRestoredForRef = useRef(null);
   useEffect(() => {
-    if (searchParams.get("mode")) {
-      return;
-    }
-    if (!sessionId) {
-      return;
-    }
-    if (modeRestoredForRef.current === sessionId) {
-      return;
-    }
-    if (messages.length === 0) {
-      modeRestoredForRef.current = sessionId;
-      return;
-    }
-
-    modeRestoredForRef.current = sessionId;
+    if (urlMode || searchParams.get("mode")) return;
+    if (modeTouchedRef.current) return;
+    if (storageGet(PROMPT_DRAFT_KEY)) return;
+    if (sessionId && !historyLoaded) return;
     const detected = detectModeFromMessages(messages, aliasToMode);
-    if (detected && detected !== "chat") {
-      setSelectedMode(detected);
-    }
-  }, [sessionId, messages.length, searchParams, aliasToMode, messages]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!detected || detected === selectedModeRef.current) return;
+    setSelectedMode(detected);
+  }, [sessionId, historyLoaded, messages, aliasToMode, urlMode, searchParams]);
 
   const PRIVATE_MODES = useMemo(() => new Set(["monitor", "scheduler", "cloud", "gitlab"]), []);
   const autoPrivateRef = useRef(false);
@@ -385,6 +386,9 @@ export default function ChatView({
     const prefix = modePrefixes[selectedMode] || "";
     const finalText = prefix && !text.trimStart().startsWith("@") ? prefix + text : text;
     onSendQuery(finalText, [], "auto", profileOverrides);
+    // replaceState assigns the session id without updating useParams.
+    const sid = sessionId || sessionIdFromPath(window.location.pathname);
+    if (sid) writeSessionMode(sid, selectedMode);
   };
 
   const inputProps = {
@@ -406,7 +410,7 @@ export default function ChatView({
     onCompactSession,
     modes,
     selectedMode,
-    onModeChange: setSelectedMode,
+    onModeChange: selectMode,
     incognito,
     onToggleIncognito,
     noHistory,

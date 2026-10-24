@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { rememberRecentMode } from "../lib/modePicker";
 import HelpModal from "./HelpModal";
+import ModeSelector from "./ModeSelector";
+import PromptHighlight from "./PromptHighlight";
 import ProviderSelector from "./ProviderSelector";
 
-const PROMPT_DRAFT_KEY = "agentforge:prompt-draft";
+export const PROMPT_DRAFT_KEY = "agentforge:prompt-draft";
 
 const OFFLINE_GRACE_MS = 3000;
 
@@ -74,6 +77,7 @@ export default function ChatInput({
   const [helpOpen, setHelpOpen] = useState(false);
   const [showOffline, setShowOffline] = useState(false);
   const inputRef = useRef(null);
+  const highlightRef = useRef(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -171,6 +175,7 @@ export default function ChatInput({
     historyIdxRef.current = -1;
     draftRef.current = "";
     localStorage.removeItem(PROMPT_DRAFT_KEY);
+    if (selectedMode) rememberRecentMode(selectedMode);
     onSend(trimmed);
     setText("");
     requestAnimationFrame(() => {
@@ -948,44 +953,60 @@ export default function ChatInput({
           )}
 
           <div className="flex items-end gap-2 mt-1 mb-1">
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={text}
-              onChange={handleInput}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              placeholder={
-                offline
-                  ? "Disconnected — reconnecting to AgentForge…"
-                  : disabled
-                    ? "Agent is working..."
-                    : stillUploading
-                      ? "Uploading files..."
-                      : hasFiles
-                        ? `${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} attached — add a message...`
-                        : noHistory || selectedMode === "cloud" || selectedMode === "gitlab"
-                          ? "Private session — follow-ups work, cross-session history skipped..."
-                          : incognito
-                            ? "Private session — no history forwarded to the AI..."
-                            : selectedMode === "chat"
-                              ? "Ask the agent..."
-                              : `${modes.find((m) => m.id === selectedMode)?.label} mode — describe your task...`
-              }
-              disabled={busyOrOffline}
-              autoFocus
-              className={`flex-1 px-3 py-2 bg-gray-800 rounded-lg
-                         text-gray-100 placeholder-gray-500
-                         focus:outline-none
-                         disabled:opacity-50 disabled:cursor-not-allowed
-                         text-sm resize-none overflow-y-auto leading-relaxed
-                         ${
-                           incognito
-                             ? "border border-violet-600/70 focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                             : "border border-gray-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-}`}
-              style={{ maxHeight: 200 }}
-            />
+            <div
+              className={`relative flex-1 min-w-0 rounded-lg bg-gray-800 border
+                          ${busyOrOffline ? "opacity-50" : ""}
+                          ${
+                            incognito
+                              ? "border-violet-600/70 focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500"
+                              : "border-gray-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
+                          }`}
+            >
+              <div
+                ref={highlightRef}
+                aria-hidden
+                className="prompt-highlight pointer-events-none absolute inset-0 overflow-y-auto px-3 py-2
+                           text-sm leading-relaxed whitespace-pre-wrap text-gray-100"
+              >
+                <PromptHighlight text={text} />
+              </div>
+              <textarea
+                ref={inputRef}
+                rows={1}
+                value={text}
+                onChange={handleInput}
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                onScroll={(e) => {
+                  if (highlightRef.current)
+                    highlightRef.current.scrollTop = e.currentTarget.scrollTop;
+                }}
+                placeholder={
+                  offline
+                    ? "Disconnected — reconnecting to AgentForge…"
+                    : disabled
+                      ? "Agent is working..."
+                      : stillUploading
+                        ? "Uploading files..."
+                        : hasFiles
+                          ? `${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} attached — add a message...`
+                          : noHistory || selectedMode === "cloud" || selectedMode === "gitlab"
+                            ? "Private session — follow-ups work, cross-session history skipped..."
+                            : incognito
+                              ? "Private session — no history forwarded to the AI..."
+                              : selectedMode === "chat"
+                                ? "Ask the agent..."
+                                : `${modes.find((m) => m.id === selectedMode)?.label} mode — describe your task...`
+                }
+                disabled={busyOrOffline}
+                autoFocus
+                className="prompt-input relative w-full px-3 py-2 bg-transparent rounded-lg
+                           placeholder-gray-500 focus:outline-none
+                           disabled:cursor-not-allowed
+                           text-sm resize-none overflow-y-auto leading-relaxed whitespace-pre-wrap"
+                style={{ maxHeight: 200 }}
+              />
+            </div>
 
             <button
               type="button"
@@ -1081,146 +1102,6 @@ export default function ChatInput({
     </div>
   );
 }
-
-const ModeTile = ({ mode, selected, onSelect }) => {
-  const isActive = mode.id === selected;
-  const firstAlias = (mode.aliases || "").match(/@\w+/)?.[0] || mode.prefix?.trim() || "";
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(mode.id)}
-      className={`flex flex-col items-start gap-0.5 px-2.5 py-1.5 rounded-lg text-left
-                  transition-colors border
-                  ${
-                    isActive
-                      ? `bg-gray-800 border-gray-600 ${mode.text}`
-                      : "bg-gray-800/40 border-transparent hover:bg-gray-800 hover:border-gray-700"
-                  }`}
-    >
-      <div className="flex items-center gap-1.5 w-full">
-        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${mode.dot}`} />
-        <span className={`text-xs font-medium truncate ${isActive ? mode.text : "text-gray-300"}`}>
-          {mode.label}
-        </span>
-        {isActive && <span className="ml-auto text-[9px] text-gray-500">✓</span>}
-      </div>
-      {firstAlias && (
-        <span className="text-[10px] font-mono text-gray-600 pl-3.5 truncate w-full">
-          {firstAlias}
-        </span>
-      )}
-    </button>
-  );
-};
-
-const ModeSelector = ({ modes, selected, onChange, disabled }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const current = modes.find((m) => m.id === selected) || modes[0];
-  const isChat = selected === "chat";
-
-  useEffect(() => {
-    if (!open) return;
-    const handle = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    const handleKey = (e) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", handle);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handle);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative flex-shrink-0">
-      {/* Trigger button */}
-      <button
-        type="button"
-        onClick={() => !disabled && setOpen((o) => !o)}
-        disabled={disabled}
-        title="Select mode"
-        className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-xs font-medium
-                    transition-colors disabled:opacity-40 disabled:cursor-not-allowed
-                    ${
-                      isChat
-                        ? "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
-                        : `bg-gray-800 border-gray-600 ${current.text} hover:border-gray-500`
-                    }`}
-      >
-        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${current.dot}`} />
-        <span>{current.label}</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="10"
-          height="10"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-
-      {open && (
-        <div
-          className="absolute bottom-full mb-2 left-0 z-50
-                     bg-gray-900 border border-gray-700 rounded-xl shadow-2xl
-                     p-2 overflow-hidden"
-          style={{ width: "min(calc(100vw - 48px), 820px)" }}
-        >
-          <div className="grid grid-cols-7 gap-1.5">
-            {modes
-              .filter((mode) => !mode.connector)
-              .map((mode) => (
-                <ModeTile
-                  key={mode.id}
-                  mode={mode}
-                  selected={selected}
-                  onSelect={(id) => {
-                    onChange(id);
-                    setOpen(false);
-                  }}
-                />
-              ))}
-          </div>
-          {modes.some((mode) => mode.connector) && (
-            <>
-              <div className="flex items-center gap-2 mt-3 mb-1.5 px-0.5">
-                <span className="text-[10px] uppercase tracking-wider text-gray-500 font-medium">
-                  Connections
-                </span>
-                <span className="flex-1 h-px bg-gray-800" />
-              </div>
-              <div className="grid grid-cols-7 gap-1.5">
-                {modes
-                  .filter((mode) => mode.connector)
-                  .map((mode) => (
-                    <ModeTile
-                      key={mode.id}
-                      mode={mode}
-                      selected={selected}
-                      onSelect={(id) => {
-                        onChange(id);
-                        setOpen(false);
-                      }}
-                    />
-                  ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
 
 const SkillSelector = ({
   skills,
