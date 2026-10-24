@@ -456,7 +456,7 @@ export default function CommandPermissionsModal({ open, onClose }) {
                            activeTab === tool.id
                              ? "border-indigo-500 text-indigo-300"
                              : "border-transparent text-gray-500 hover:text-gray-300"
-}`}
+                         }`}
             >
               {tool.label}
               <span

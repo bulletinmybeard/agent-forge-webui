@@ -707,7 +707,7 @@ export default function ChatInput({
                              incognito
                                ? "text-violet-400 bg-violet-900/30 border border-violet-600/50 hover:bg-violet-900/50"
                                : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
-}`}
+                           }`}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -742,7 +742,7 @@ export default function ChatInput({
                              notificationsEnabled
                                ? "text-amber-400 bg-amber-900/30 border border-amber-600/50 hover:bg-amber-900/50"
                                : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
-}`}
+                           }`}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -1023,7 +1023,7 @@ export default function ChatInput({
                            atFileLimit && !disabled
                              ? "text-amber-500 hover:text-amber-400"
                              : "text-gray-400 hover:text-gray-200 hover:bg-gray-800"
-}`}
+                         }`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -1067,7 +1067,7 @@ export default function ChatInput({
                                : incognito
                                  ? "bg-violet-600 hover:bg-violet-500"
                                  : "bg-indigo-600 hover:bg-indigo-500"
-}`}
+                           }`}
               >
                 {stillUploading ? "Uploading…" : wouldExceedContext ? "Too large" : "Send"}
               </button>

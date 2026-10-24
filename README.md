@@ -39,7 +39,6 @@ It's a pure frontend: it streams the agent's think > act > observe loop over the
 ## Getting started
 
 Prerequisites:
-
 - **Node 20.19+** (`engines` in `package.json`)
 - A running [AgentForge](https://github.com/bulletinmybeard/agent-forge) backend **[v0.16.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.16.0) or newer** (`scripts/deploy-local.sh` brings the stack up with the web service on `:8200`)
 
@@ -73,7 +72,6 @@ scripts/teardown-web-local.sh  # stop and remove it
 It expects an AgentForge backend reachable at `http://host.docker.internal:8200` (the default from the backend's `scripts/deploy-local.sh`).
 
 Flags:
-
 - `--dev` (alias `--hot`): skip the container and run the Vite dev server with hot reload on the same port, proxying `/ws` `/api` `/uploads` `/trips` to the backend. The fast inner loop: no image, no rebuilds, instant reloads on save
 - `--no-build`: recreate the container without rebuilding the image
 - `--no-cache`: force a clean image build (no Docker layer cache)
