@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [0.7.0] - 2026-10-24
 
+Needs [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[≥ 0.17.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0)** for `@film` / `@movie` / `@movies`: TMDB lookup, the local `film_db` library, and recommend-similar.
+
 ### Added
 
 - Mode chip **Film** (`@film`, `@movie`, `@movies`) for TMDB lookup, local library, and recommend

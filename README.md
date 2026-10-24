@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Vite](https://img.shields.io/badge/Vite-8-646cff.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Biome](https://img.shields.io/badge/lint%2Fformat-Biome-60a5fa.svg?logo=biome&logoColor=white)](https://biomejs.dev/)
-[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.16.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0)
+[![Requires AgentForge](https://img.shields.io/badge/requires-AgentForge%200.17.0%2B-blueviolet)](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0)
 [![Code review: Claude Opus 5](https://img.shields.io/badge/code%20review-Claude%20Opus%205-D97757?logo=claude&logoColor=white)](#pre-release-code-review)
 
 > [!NOTE]
