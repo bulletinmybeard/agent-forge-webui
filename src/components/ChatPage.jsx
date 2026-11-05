@@ -25,6 +25,9 @@ export default function ChatPage() {
         confirm={agent.confirm}
         secret={agent.secret}
         onSendQuery={agent.sendQuery}
+        promptQueue={agent.promptQueue}
+        onCancelQueued={agent.cancelQueued}
+        onRunQueuedNow={agent.runQueuedNow}
         onConfirm={agent.respondConfirm}
         onSecret={agent.respondSecret}
         onCancel={agent.cancelRun}

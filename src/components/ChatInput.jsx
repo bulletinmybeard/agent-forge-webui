@@ -3,6 +3,7 @@ import { rememberRecentMode } from "../lib/modePicker";
 import HelpModal from "./HelpModal";
 import ModeSelector from "./ModeSelector";
 import PromptHighlight from "./PromptHighlight";
+import PromptQueue from "./PromptQueue";
 import ProviderSelector from "./ProviderSelector";
 
 export const PROMPT_DRAFT_KEY = "agentforge:prompt-draft";
@@ -32,10 +33,12 @@ const extOf = (name) => {
 
 export default function ChatInput({
   onSend,
-  disabled,
   running,
   connected = true,
   onCancel,
+  promptQueue = [],
+  onCancelQueued,
+  onRunQueuedNow,
   onOpenProfiles,
   onOpenMemory,
   onOpenConnectors,
@@ -90,7 +93,7 @@ export default function ChatInput({
   }, [connected]);
 
   const offline = showOffline;
-  const busyOrOffline = disabled || offline;
+  const inputLocked = offline;
 
   useEffect(() => {
     if (text) localStorage.setItem(PROMPT_DRAFT_KEY, text);
@@ -150,7 +153,7 @@ export default function ChatInput({
   const remainingTokens = maxTokens - usedTokens;
   const wouldExceedContext = estimatedNewTokens > remainingTokens;
   const contextPercent = Math.min(((usedTokens + estimatedNewTokens) / maxTokens) * 100, 100);
-  const attachDisabled = busyOrOffline || atFileLimit || wouldExceedContext;
+  const attachDisabled = inputLocked || atFileLimit || wouldExceedContext;
 
   const autoResize = useCallback(() => {
     const el = inputRef.current;
@@ -162,7 +165,7 @@ export default function ChatInput({
   const handleSubmit = (e) => {
     e.preventDefault();
     const trimmed = text.trim();
-    if ((!trimmed && !hasFiles) || busyOrOffline || stillUploading) return;
+    if ((!trimmed && !hasFiles) || inputLocked || stillUploading) return;
     if (wouldExceedContext) {
       setAttachError(
         `Content too large for context window — estimated ${estimatedNewTokens.toLocaleString()} tokens but only ~${remainingTokens.toLocaleString()} remaining. Remove attachments or shorten your prompt.`,
@@ -590,6 +593,8 @@ export default function ChatInput({
           </div>
         )}
 
+        <PromptQueue items={promptQueue} onCancel={onCancelQueued} onRunNow={onRunQueuedNow} />
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-1.5 mt-2">
           <input
             ref={fileInputRef}
@@ -605,7 +610,7 @@ export default function ChatInput({
                 modes={modes}
                 selected={selectedMode}
                 onChange={onModeChange}
-                disabled={busyOrOffline}
+                disabled={inputLocked}
               />
             )}
 
@@ -615,7 +620,7 @@ export default function ChatInput({
                 selected={selectedProvider}
                 onChange={onProviderChange}
                 locked={providerLocked}
-                disabled={busyOrOffline}
+                disabled={inputLocked}
               />
             )}
 
@@ -632,7 +637,7 @@ export default function ChatInput({
                   <select
                     onChange={handlePresetSelect}
                     defaultValue=""
-                    disabled={busyOrOffline}
+                    disabled={inputLocked}
                     title="Insert a saved prompt preset"
                     className="px-2 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm
                              rounded-lg hover:border-gray-600 focus:outline-none cursor-pointer
@@ -674,7 +679,7 @@ export default function ChatInput({
                 selected={selectedSkills}
                 onChange={onSkillsChange}
                 locked={skillsLocked}
-                disabled={busyOrOffline}
+                disabled={inputLocked}
                 activeMode={activeMode}
               />
             )}
@@ -686,7 +691,7 @@ export default function ChatInput({
                 type="button"
                 onClick={onToggleIncognito}
                 disabled={
-                  busyOrOffline ||
+                  inputLocked ||
                   noHistory ||
                   selectedMode === "monitor" ||
                   selectedMode === "scheduler" ||
@@ -765,7 +770,7 @@ export default function ChatInput({
               <button
                 type="button"
                 onClick={onOpenProfiles}
-                disabled={busyOrOffline}
+                disabled={inputLocked}
                 title="Edit profile overrides"
                 className="p-2 text-gray-400 hover:text-gray-200 bg-gray-800 border border-gray-700
                            rounded-lg hover:border-gray-600 transition-colors
@@ -955,7 +960,7 @@ export default function ChatInput({
           <div className="flex items-end gap-2 mt-1 mb-1">
             <div
               className={`relative flex-1 min-w-0 rounded-lg bg-gray-800 border
-                          ${busyOrOffline ? "opacity-50" : ""}
+                          ${inputLocked ? "opacity-50" : ""}
                           ${
                             incognito
                               ? "border-violet-600/70 focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500"
@@ -984,8 +989,8 @@ export default function ChatInput({
                 placeholder={
                   offline
                     ? "Disconnected — reconnecting to AgentForge…"
-                    : disabled
-                      ? "Agent is working..."
+                    : running
+                      ? "Queue a follow-up..."
                       : stillUploading
                         ? "Uploading files..."
                         : hasFiles
@@ -998,7 +1003,7 @@ export default function ChatInput({
                                 ? "Ask the agent..."
                                 : `${modes.find((m) => m.id === selectedMode)?.label} mode — describe your task...`
                 }
-                disabled={busyOrOffline}
+                disabled={inputLocked}
                 autoFocus
                 className="prompt-input relative w-full px-3 py-2 bg-transparent rounded-lg
                            placeholder-gray-500 focus:outline-none
@@ -1020,7 +1025,7 @@ export default function ChatInput({
               className={`p-2 transition-colors rounded-lg
                          disabled:opacity-40 disabled:cursor-not-allowed
                          ${
-                           atFileLimit && !disabled
+                           atFileLimit && !inputLocked
                              ? "text-amber-500 hover:text-amber-400"
                              : "text-gray-400 hover:text-gray-200 hover:bg-gray-800"
                          }`}
@@ -1040,7 +1045,7 @@ export default function ChatInput({
               </svg>
             </button>
 
-            {running && onCancel ? (
+            {running && onCancel && (
               <button
                 type="button"
                 onClick={onCancel}
@@ -1049,29 +1054,37 @@ export default function ChatInput({
               >
                 Stop
               </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={
-                  busyOrOffline ||
-                  stillUploading ||
-                  wouldExceedContext ||
-                  (!text.trim() && !hasFiles)
-                }
-                title={wouldExceedContext ? "Content exceeds model context window" : undefined}
-                className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors
+            )}
+            <button
+              type="submit"
+              disabled={
+                inputLocked || stillUploading || wouldExceedContext || (!text.trim() && !hasFiles)
+              }
+              title={
+                wouldExceedContext
+                  ? "Content exceeds model context window"
+                  : running
+                    ? "Queue until the current prompt finishes"
+                    : undefined
+              }
+              className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors
                            disabled:opacity-40 disabled:cursor-not-allowed
                            ${
-                             wouldExceedContext && !disabled
+                             wouldExceedContext && !running
                                ? "bg-red-700 hover:bg-red-600"
                                : incognito
                                  ? "bg-violet-600 hover:bg-violet-500"
                                  : "bg-indigo-600 hover:bg-indigo-500"
                            }`}
-              >
-                {stillUploading ? "Uploading…" : wouldExceedContext ? "Too large" : "Send"}
-              </button>
-            )}
+            >
+              {stillUploading
+                ? "Uploading…"
+                : wouldExceedContext
+                  ? "Too large"
+                  : running
+                    ? "Queue"
+                    : "Send"}
+            </button>
           </div>
         </form>
 
@@ -1083,7 +1096,7 @@ export default function ChatInput({
           <ContextBar
             contextUsage={contextUsage || { percent: 0, message_count: 0 }}
             onCompact={onCompactSession}
-            disabled={busyOrOffline}
+            disabled={inputLocked || running}
           />
         </div>
 

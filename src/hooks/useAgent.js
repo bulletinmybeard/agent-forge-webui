@@ -4,8 +4,11 @@ import { v7 as uuidv7 } from "uuid";
 import { isPendingFileDiff, upsertFileDiffMessage } from "../lib/fileDiff";
 import { isPlanAwaitingApproval, isPlanDocumentResult } from "../lib/planDocument";
 import { adoptPolledTurn } from "../lib/polledTurn";
+import { dropPrompt, enqueuePrompt, shiftPrompt, takePrompt } from "../lib/promptQueue";
 import ws from "../lib/ws";
 import useRecap from "./useRecap";
+
+const DRAIN_MS = 150;
 
 export const useAgent = () => {
   const { sessionId: urlSessionId } = useParams();
@@ -115,6 +118,15 @@ export const useAgent = () => {
 
   const sessionIdRef = useRef(urlSessionId || null);
   const runningRef = useRef(false);
+  const turnOpenRef = useRef(false);
+  const pendingInterruptRef = useRef(false);
+  const turnSinceRef = useRef(0);
+  const queueRef = useRef([]);
+  const queueIdRef = useRef(0);
+  const drainTimerRef = useRef(null);
+  const closeTurnRef = useRef(() => {});
+  const dispatchRef = useRef(() => {});
+  const [promptQueue, setPromptQueue] = useState([]);
   const historyReadyRef = useRef(false);
   const toolBufferRef = useRef([]);
   const liveToolCallsTsRef = useRef(null);
@@ -172,6 +184,14 @@ export const useAgent = () => {
       setCommandNotes(new Map());
       runningRef.current = false;
       setRunning(false);
+      turnOpenRef.current = false;
+      pendingInterruptRef.current = false;
+      queueRef.current = [];
+      setPromptQueue([]);
+      if (drainTimerRef.current) {
+        clearTimeout(drainTimerRef.current);
+        drainTimerRef.current = null;
+      }
       setIncognito(false);
       setNoHistory(false);
       historyReadyRef.current = true;
@@ -186,6 +206,14 @@ export const useAgent = () => {
 
     runningRef.current = false;
     setRunning(false);
+    turnOpenRef.current = false;
+    pendingInterruptRef.current = false;
+    queueRef.current = [];
+    setPromptQueue([]);
+    if (drainTimerRef.current) {
+      clearTimeout(drainTimerRef.current);
+      drainTimerRef.current = null;
+    }
     setIncognito(false);
 
     const anchorMatch = window.location.hash.match(/^#msg-(\d+)/);
@@ -304,8 +332,9 @@ export const useAgent = () => {
               }
               return recovered;
             });
-            if (runDone) {
+            if (runDone && !pendingInterruptRef.current) {
               setRunningTracked(false);
+              closeTurnRef.current();
             }
           })
           .catch(() => {});
@@ -348,10 +377,18 @@ export const useAgent = () => {
       setSessionTitle(msg.title);
     };
 
+    const finishTurn = () => {
+      if (pendingInterruptRef.current) return;
+      setRunningTracked(false);
+      closeTurnRef.current();
+    };
+
     const onRouting = () => {
+      if (pendingInterruptRef.current) pendingInterruptRef.current = false;
       retrySnapshotRef.current = null;
       setRunningTracked(true);
       addMessage({ type: "routing" });
+      setAgentStatus({ phase: "routing", detail: { text: "Routing the request..." } });
     };
 
     const onRouted = (msg) => {
@@ -532,7 +569,7 @@ export const useAgent = () => {
       setAgentStatus(null);
       if (!isPlanAwaitingApproval(msg, msg.text)) {
         setConfirm(null);
-        setRunningTracked(false);
+        finishTurn();
       }
     };
 
@@ -547,7 +584,7 @@ export const useAgent = () => {
       });
 
       setAgentStatus(null);
-      setRunningTracked(false);
+      finishTurn();
 
       liveToolCallsTsRef.current = null;
       liveResultTsRef.current = null;
@@ -578,33 +615,45 @@ export const useAgent = () => {
         recoverable: msg.recoverable,
       });
       setAgentStatus(null);
-      setRunningTracked(false);
+      finishTurn();
     };
 
     const onCancelled = (msg) => {
       finalizeTools();
       liveResultTsRef.current = null;
       setConfirm(null);
-      setMessages((prev) => [
-        ...stampFileDiffOutcome(prev, "cancelled"),
-        {
-          type: "cancelled",
-          elapsed: msg.elapsed,
-          _ts: `${Date.now()}-${++msgSeqRef.current}`,
-        },
-      ]);
+      setSecret(null);
+      const interrupting = pendingInterruptRef.current;
+      if (interrupting) pendingInterruptRef.current = false;
+      const card = {
+        type: "cancelled",
+        elapsed: msg.elapsed,
+        _ts: `${Date.now()}-${++msgSeqRef.current}`,
+      };
+      setMessages((prev) => {
+        const stamped = stampFileDiffOutcome(prev, "cancelled");
+        if (!interrupting) return [...stamped, card];
+        const idx = stamped.findIndex((m) => m._interrupt);
+        if (idx === -1) return [...stamped, card];
+        const next = stamped.slice();
+        next.splice(idx, 0, card);
+        next[idx + 1] = { ...next[idx + 1], _interrupt: false };
+        return next;
+      });
       setAgentStatus(null);
-      setRunningTracked(false);
+      if (!interrupting) finishTurn();
     };
 
     const onAgentIteration = (msg) => {
-      setAgentStatus({
+      setAgentStatus((prev) => ({
+        ...(prev || {}),
         iteration: msg.iteration,
         maxIterations: msg.max_iterations,
         phase: "iterating",
         detail: msg.detail || null,
         elapsed: msg.elapsed,
-      });
+        purpose: "",
+      }));
     };
 
     const onAgentThinking = (msg) => {
@@ -614,6 +663,29 @@ export const useAgent = () => {
         phase: "thinking",
         detail: null,
         elapsed: msg.elapsed,
+        model: msg.model || prev?.model || "",
+        profile: msg.profile || prev?.profile || "",
+        provider: msg.provider || prev?.provider || "",
+        messages: msg.messages != null ? msg.messages : prev?.messages,
+        modelStatus: msg.status || "",
+        purpose: msg.purpose || "",
+      }));
+    };
+
+    const onAgentProgress = (msg) => {
+      if (!msg?.phase) return;
+      setAgentStatus((prev) => ({
+        iteration: msg.iteration ?? null,
+        maxIterations: msg.max_iterations ?? null,
+        phase: msg.phase,
+        detail: msg.detail ?? null,
+        elapsed: msg.elapsed,
+        model: msg.model || prev?.model || "",
+        profile: msg.profile || prev?.profile || "",
+        provider: msg.provider || prev?.provider || "",
+        messages: msg.messages != null ? msg.messages : prev?.messages,
+        modelStatus: msg.status || "",
+        purpose: msg.purpose || "",
       }));
     };
 
@@ -715,6 +787,86 @@ export const useAgent = () => {
         next_model: msg.next_model,
         reason: msg.reason,
         provider: msg.provider,
+      });
+      setAgentStatus((prev) => {
+        const model = msg.next_model || prev?.model || "";
+        const profile = msg.next_profile || prev?.profile || "";
+        const provider = msg.provider || prev?.provider || "";
+        if (prev?.phase === "tool_running") {
+          return { ...prev, model, profile, provider };
+        }
+        return {
+          ...(prev || {}),
+          phase: "thinking",
+          model,
+          profile,
+          provider,
+          purpose: "",
+        };
+      });
+    };
+
+    const onReviewProgress = (msg) => {
+      if (msg.phase === "starting") {
+        addMessage({
+          type: "review_progress",
+          style: msg.style,
+          agents: (msg.sub_agents || []).map((agent) => ({
+            id: agent.id,
+            label: agent.label,
+            description: agent.description,
+            model: agent.model || "",
+            status: "running",
+            detail: agent.model ? `Calling ${agent.model}` : "Starting",
+          })),
+        });
+      } else {
+        setMessages((prev) => patchReviewProgress(prev, msg));
+        if (msg.phase === "fallback") {
+          addMessage({
+            type: "model_fallback",
+            prev_profile: msg.prev_profile,
+            prev_model: msg.prev_model,
+            next_profile: msg.next_profile,
+            next_model: msg.next_model,
+            reason: msg.reason,
+            provider: msg.provider,
+          });
+        }
+      }
+      setAgentStatus({ phase: "review", detail: { text: reviewStatusText(msg) } });
+    };
+
+    const onParallelGroup = (msg) => {
+      if (msg.event === "result") return;
+      const text = parallelGroupText(msg);
+      if (!text) return;
+      setAgentStatus({ phase: "parallel", detail: { text } });
+    };
+
+    const onParallelPlan = (msg) => {
+      addMessage({
+        type: "parallel_plan",
+        groups: msg.groups || [],
+        elapsed: msg.elapsed,
+      });
+    };
+
+    const onCodingPlan = (msg) => {
+      addMessage({
+        type: "coding_plan",
+        source: msg.source,
+        plan: msg.plan,
+        elapsed: msg.elapsed,
+      });
+    };
+
+    const onPromptRefined = (msg) => {
+      addMessage({
+        type: "prompt_refined",
+        original: msg.original,
+        refined: msg.refined,
+        message: msg.message,
       });
     };
 
@@ -1012,7 +1164,7 @@ export const useAgent = () => {
         },
       ]);
       setContextUsage(null);
-      setRunningTracked(false);
+      finishTurn();
     };
 
     const onInstructionSaved = (msg) => {
@@ -1020,6 +1172,7 @@ export const useAgent = () => {
         ...prev.filter((i) => i.id !== msg.instruction_id),
         { id: msg.instruction_id, text: msg.text, scope: msg.scope },
       ]);
+      finishTurn();
     };
 
     const onInstructionCleared = () => {
@@ -1056,12 +1209,13 @@ export const useAgent = () => {
     ws.on("agent.error", onError);
     ws.on("agent.cancelled", onCancelled);
     ws.on("run.idle", () => {
-      setRunningTracked(false);
       liveToolCallsTsRef.current = null;
       liveResultTsRef.current = null;
+      finishTurn();
     });
     ws.on("agent.iteration", onAgentIteration);
     ws.on("agent.thinking", onAgentThinking);
+    ws.on("agent.progress", onAgentProgress);
     ws.on("agent.tool_exec", onAgentToolExec);
     ws.on("pipeline.step", onPipelineStep);
     ws.on("agent.retry", onAgentRetry);
@@ -1069,6 +1223,11 @@ export const useAgent = () => {
     ws.on("agent.escalation", onAgentEscalation);
     ws.on("agent.warning", onAgentWarning);
     ws.on("agent.model_fallback", onModelFallback);
+    ws.on("review.progress", onReviewProgress);
+    ws.on("parallel.group", onParallelGroup);
+    ws.on("parallel.plan", onParallelPlan);
+    ws.on("coding.plan", onCodingPlan);
+    ws.on("prompt.refined", onPromptRefined);
     ws.on("search.meta", onSearchMeta);
     ws.on("discovery.scope", onDiscoveryScope);
     ws.on("discovery.area", onDiscoveryArea);
@@ -1091,13 +1250,16 @@ export const useAgent = () => {
     const onRetryError = (msg) => {
       const snap = retrySnapshotRef.current;
       if (snap) {
-        setMessages((prev) => [...prev, ...snap.removed]);
+        setMessages((prev) => [...prev.slice(0, snap.cut), ...snap.removed]);
         retrySnapshotRef.current = null;
       }
       addMessage({
         type: "error",
         message: `Retry failed: ${msg?.reason || "unknown"}`,
       });
+      setAgentStatus(null);
+      turnOpenRef.current = false;
+      setRunningTracked(false);
     };
     ws.on("query.retry.error", onRetryError);
 
@@ -1126,6 +1288,7 @@ export const useAgent = () => {
       ws.off("agent.cancelled", onCancelled);
       ws.off("agent.iteration", onAgentIteration);
       ws.off("agent.thinking", onAgentThinking);
+      ws.off("agent.progress", onAgentProgress);
       ws.off("agent.tool_exec", onAgentToolExec);
       ws.off("pipeline.step", onPipelineStep);
       ws.off("agent.retry", onAgentRetry);
@@ -1133,6 +1296,11 @@ export const useAgent = () => {
       ws.off("agent.escalation", onAgentEscalation);
       ws.off("agent.warning", onAgentWarning);
       ws.off("agent.model_fallback", onModelFallback);
+      ws.off("review.progress", onReviewProgress);
+      ws.off("parallel.group", onParallelGroup);
+      ws.off("parallel.plan", onParallelPlan);
+      ws.off("coding.plan", onCodingPlan);
+      ws.off("prompt.refined", onPromptRefined);
       ws.off("search.meta", onSearchMeta);
       ws.off("discovery.scope", onDiscoveryScope);
       ws.off("discovery.area", onDiscoveryArea);
@@ -1287,62 +1455,114 @@ export const useAgent = () => {
     setPendingFiles([]);
   }, []);
 
-  const sendQuery = useCallback(
-    async (text, _files = [], _modelOverride = "auto", profileOverrides = {}) => {
-      const currentSessionId = ensureSessionId();
-
+  const buildQueryItem = useCallback(
+    (text, profileOverrides = {}, { interrupt = false } = {}) => {
       const readyFiles = pendingFiles.filter((pf) => pf.status === "ready" && pf.result);
       const stillUploading = pendingFiles.filter((pf) => pf.status === "uploading");
-
       if (stillUploading.length > 0) {
         console.warn("sendQuery called while files still uploading — sending without them");
       }
-
       const attachments = readyFiles.map((pf) => ({ ...pf.result }));
-
-      addMessage({
-        type: "query",
-        text: text || (attachments.length > 0 ? `[Attached ${attachments.length} file(s)]` : ""),
-        attachments,
-      });
-
       const overrides = {};
       if (Object.keys(profileOverrides).length > 0) overrides.profiles = profileOverrides;
       if (incognito) overrides.incognito = true;
-
       const alreadyStamped = !!sessionInfo?.provider_override;
       if (selectedProvider && selectedProvider !== "default" && !alreadyStamped) {
         overrides.provider = selectedProvider;
       }
-
-      ws.sendQuery(
+      return {
+        id: `q${++queueIdRef.current}`,
         text,
-        currentSessionId,
-        attachments.length > 0 ? attachments : undefined,
-        Object.keys(overrides).length > 0 ? overrides : undefined,
-      );
-
-      setRunningTracked(true);
-      setPendingFiles([]);
+        attachments,
+        overrides,
+        interrupt,
+      };
     },
-    [
-      addMessage,
-      ensureSessionId,
-      incognito,
-      pendingFiles,
-      selectedProvider,
-      sessionInfo?.provider_override,
-      setRunningTracked,
-    ],
+    [incognito, pendingFiles, selectedProvider, sessionInfo?.provider_override],
   );
+
+  dispatchRef.current = (item) => {
+    const currentSessionId = ensureSessionId();
+    addMessage({
+      type: "query",
+      text:
+        item.text ||
+        (item.attachments.length > 0 ? `[Attached ${item.attachments.length} file(s)]` : ""),
+      attachments: item.attachments,
+      ...(item.interrupt ? { _interrupt: true } : {}),
+    });
+    ws.sendQuery(
+      item.text,
+      currentSessionId,
+      item.attachments.length > 0 ? item.attachments : undefined,
+      Object.keys(item.overrides).length > 0 ? item.overrides : undefined,
+    );
+    turnSinceRef.current = Date.now();
+    turnOpenRef.current = true;
+    setRunningTracked(true);
+  };
+
+  closeTurnRef.current = () => {
+    if (pendingInterruptRef.current) return;
+    if (drainTimerRef.current) clearTimeout(drainTimerRef.current);
+    drainTimerRef.current = setTimeout(() => {
+      drainTimerRef.current = null;
+      if (pendingInterruptRef.current || runningRef.current) return;
+      turnOpenRef.current = false;
+      const next = shiftPrompt(queueRef.current);
+      if (!next.item) return;
+      queueRef.current = next.queue;
+      setPromptQueue(next.queue);
+      dispatchRef.current(next.item);
+    }, DRAIN_MS);
+  };
+
+  const sendQuery = useCallback(
+    async (text, _files = [], _modelOverride = "auto", profileOverrides = {}) => {
+      const item = buildQueryItem(text, profileOverrides);
+      setPendingFiles([]);
+      if (runningRef.current || turnOpenRef.current) {
+        const queued = enqueuePrompt(queueRef.current, item);
+        queueRef.current = queued;
+        setPromptQueue(queued);
+        return;
+      }
+      dispatchRef.current(item);
+    },
+    [buildQueryItem],
+  );
+
+  const cancelQueued = useCallback((id) => {
+    const queued = dropPrompt(queueRef.current, id);
+    queueRef.current = queued;
+    setPromptQueue(queued);
+  }, []);
+
+  const runQueuedNow = useCallback((id) => {
+    const taken = takePrompt(queueRef.current, id);
+    if (!taken.item) return;
+    queueRef.current = taken.queue;
+    setPromptQueue(taken.queue);
+    if (drainTimerRef.current) {
+      clearTimeout(drainTimerRef.current);
+      drainTimerRef.current = null;
+    }
+    const interrupt = runningRef.current || turnOpenRef.current;
+    if (interrupt) pendingInterruptRef.current = true;
+    dispatchRef.current({ ...taken.item, interrupt });
+  }, []);
 
   const retryQuery = useCallback(
     (promptText, editedText, profileOverrides = {}) => {
       const currentSessionId = sessionIdRef.current;
       if (!currentSessionId || !promptText) return;
 
+      const displayText =
+        typeof editedText === "string" && editedText.trim() ? editedText.trim() : promptText;
+      toolBufferRef.current = [];
+      liveToolCallsTsRef.current = null;
       setMessages((prev) => {
-        let cut = prev.length;
+        let cut = -1;
         for (let i = prev.length - 1; i >= 0; i--) {
           const m = prev[i];
           if (m.type === "query" && m.text === promptText) {
@@ -1350,9 +1570,20 @@ export const useAgent = () => {
             break;
           }
         }
+        if (cut < 0) return prev;
         retrySnapshotRef.current = { cut, removed: prev.slice(cut) };
-        return prev.slice(0, cut);
+        return [
+          ...prev.slice(0, cut),
+          {
+            type: "query",
+            text: displayText,
+            _ts: `${Date.now()}-${++msgSeqRef.current}`,
+          },
+        ];
       });
+      turnSinceRef.current = Date.now();
+      turnOpenRef.current = true;
+      setRunningTracked(true);
 
       const overrides = {};
       if (profileOverrides && Object.keys(profileOverrides).length > 0) {
@@ -1366,7 +1597,7 @@ export const useAgent = () => {
         Object.keys(overrides).length > 0 ? overrides : undefined,
       );
     },
-    [incognito],
+    [incognito, setRunningTracked],
   );
 
   const rerouteQuery = useCallback(
@@ -1424,6 +1655,13 @@ export const useAgent = () => {
 
   const cancelRun = useCallback(() => {
     ws.sendCancel();
+    queueRef.current = [];
+    setPromptQueue([]);
+    pendingInterruptRef.current = false;
+    if (drainTimerRef.current) {
+      clearTimeout(drainTimerRef.current);
+      drainTimerRef.current = null;
+    }
   }, []);
 
   const compactSession = useCallback(() => {
@@ -1529,12 +1767,16 @@ export const useAgent = () => {
           const pending = pendingConfirmFromRestored(restored);
           if (pending) setConfirm(pending);
           setMessages((prev) => {
-            const adopted = adoptPolledTurn(prev, restored, mergeRestoredTail);
+            const adopted = adoptPolledTurn(prev, restored, mergeRestoredTail, {
+              since: turnSinceRef.current,
+            });
             if (adopted.done) {
               queueMicrotask(() => {
                 if (cancelled) return;
+                pendingInterruptRef.current = false;
                 setAgentStatus(null);
                 setRunningTracked(false);
+                closeTurnRef.current();
                 liveResultTsRef.current = null;
                 liveToolCallsTsRef.current = null;
               });
@@ -1564,6 +1806,9 @@ export const useAgent = () => {
     sessionInfo,
     sessionTitle,
     sendQuery,
+    promptQueue,
+    cancelQueued,
+    runQueuedNow,
     retryQuery,
     rerouteQuery,
     respondConfirm,
@@ -1604,6 +1849,94 @@ export const useAgent = () => {
     loadMoreMessages,
   };
 };
+
+function reviewStatusText(msg) {
+  if (msg.phase === "starting") {
+    const n = (msg.sub_agents || []).length;
+    return `Review · ${n} specialist${n === 1 ? "" : "s"}`;
+  }
+  const id = msg.agent_id || "Review";
+  if (msg.phase === "model") {
+    return msg.model ? `${id} · Calling ${msg.model}` : `${id} · Calling model`;
+  }
+  if (msg.phase === "tool") return `${id} · Running ${msg.tool || "tool"}`;
+  if (msg.phase === "completed") return `${id} done`;
+  if (msg.phase === "aggregating") return "Merging specialist findings";
+  if (msg.phase === "fallback") {
+    const model = msg.next_model || msg.model;
+    return model ? `${id} · Calling ${model}` : `${id} · falling back`;
+  }
+  return "Working...";
+}
+
+function patchReviewProgress(messages, msg) {
+  const phase = msg.phase;
+  if (phase === "starting") return messages;
+  let idx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].type === "review_progress") {
+      idx = i;
+      break;
+    }
+  }
+  if (idx === -1) return messages;
+
+  const card = messages[idx];
+  if (phase === "aggregating") {
+    const next = messages.slice();
+    next[idx] = { ...card, aggregating: "Merging specialist findings" };
+    return next;
+  }
+
+  const agents = (card.agents || []).map((agent) => ({ ...agent }));
+  const row = agents.find((agent) => agent.id === msg.agent_id);
+  if (!row) return messages;
+
+  if (phase === "model") {
+    row.status = "running";
+    if (msg.model) row.model = msg.model;
+    row.detail = msg.model ? `Calling ${msg.model}` : "Calling model";
+  } else if (phase === "tool") {
+    row.status = "running";
+    row.detail = msg.tool ? `Running ${msg.tool}` : "Running tool";
+  } else if (phase === "completed") {
+    row.status = "completed";
+    const preview = String(msg.findings_preview || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    row.detail = preview ? preview.slice(0, 80) : "done";
+  } else if (phase === "fallback") {
+    const model = msg.next_model || msg.model || row.model;
+    if (model) row.model = model;
+    row.status = "running";
+    row.detail = model ? `Calling ${model}` : "Falling back";
+  } else {
+    return messages;
+  }
+
+  const next = messages.slice();
+  next[idx] = { ...card, agents };
+  return next;
+}
+
+function parallelGroupText(msg) {
+  const label = msg.label || "Group";
+  if (msg.event === "start") {
+    const n = msg.commands;
+    return n != null ? `${label} · ${n} commands` : label;
+  }
+  if (msg.event === "command") {
+    const cmd = String(msg.command || "");
+    const shown = cmd.length > 80 ? `${cmd.slice(0, 77)}...` : cmd;
+    return shown ? `${label} · ${shown}` : label;
+  }
+  if (msg.event === "done") {
+    const failed = Array.isArray(msg.errors) ? msg.errors.length > 0 : !!msg.errors;
+    return failed ? `${label} failed` : `${label} done`;
+  }
+  if (msg.event === "error") return `${label} failed`;
+  return "";
+}
 
 function stampFileDiffOutcome(messages, outcome, { all = false } = {}) {
   const next = messages.slice();
@@ -1944,6 +2277,39 @@ const restoreMessages = (dbMessages) => {
           category: meta.category,
           message: meta.message,
           elapsed: meta.elapsed,
+          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+        });
+        break;
+
+      case "coding.plan":
+        restored.push({
+          type: "coding_plan",
+          source: meta.source,
+          plan: meta.plan,
+          elapsed: meta.elapsed,
+          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+        });
+        break;
+
+      case "parallel.plan":
+        restored.push({
+          type: "parallel_plan",
+          groups: meta.groups || [],
+          elapsed: meta.elapsed,
+          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+        });
+        break;
+
+      case "agent.model_fallback":
+      case "model_fallback":
+        restored.push({
+          type: "model_fallback",
+          prev_profile: meta.prev_profile,
+          prev_model: meta.prev_model,
+          next_profile: meta.next_profile,
+          next_model: meta.next_model,
+          reason: meta.reason,
+          provider: meta.provider,
           _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
         });
         break;

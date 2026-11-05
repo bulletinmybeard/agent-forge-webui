@@ -25,10 +25,28 @@ const GROUPS = [
   ["Ops", ["cloud", "logs", "monitor", "perf", "health", "scheduler", "security"]],
   ["Knowledge", ["search", "kb", "notes", "web"]],
   ["Personal", ["film", "trip", "felix"]],
-  ["Models", ["clef", "beam", "minimax", "mistral4"]],
+  // Filled from custom agent `group`, not a hardcoded id list.
+  ["Models", []],
   ["Connections", ["connector", "gitlab", "github"]],
   ["Custom", []],
 ];
+
+// custom agent `group` → popover section. test_models keeps the Models header.
+// Any other token becomes its own section, so a new group does not need a UI change.
+const AGENT_GROUP_LABEL = {
+  test_models: "Models",
+};
+
+const labelForAgentGroup = (group) => {
+  if (typeof group !== "string" || !group.trim()) return "";
+  const key = group.trim();
+  if (AGENT_GROUP_LABEL[key]) return AGENT_GROUP_LABEL[key];
+  return key
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+};
 
 const GROUP_ORDER = GROUPS.map(([name]) => name);
 
@@ -43,6 +61,8 @@ for (const [name, ids] of GROUPS) {
 
 export const groupFor = (mode) => {
   if (!mode) return "Custom";
+  const fromAgent = labelForAgentGroup(mode.group);
+  if (fromAgent) return fromAgent;
   return GROUP_BY_ID.get(mode.id) || (mode.connector ? "Connections" : "Custom");
 };
 
@@ -103,10 +123,16 @@ export const filterModes = (modes, query) => {
 };
 
 export const groupModes = (modes) => {
+  const index = new Map(modes.map((mode, i) => [mode.id, i]));
   const buckets = new Map(GROUP_ORDER.map((name) => [name, []]));
   for (const mode of modes) {
     const name = groupFor(mode);
-    if (!buckets.has(name)) buckets.set(name, []);
+    if (!buckets.has(name)) {
+      const custom = buckets.get("Custom");
+      buckets.delete("Custom");
+      buckets.set(name, []);
+      if (custom) buckets.set("Custom", custom);
+    }
     buckets.get(name).push(mode);
   }
   const groups = [];
@@ -117,6 +143,8 @@ export const groupModes = (modes) => {
       const ai = ORDER_BY_ID.has(a.id) ? ORDER_BY_ID.get(a.id) : 1000;
       const bi = ORDER_BY_ID.has(b.id) ? ORDER_BY_ID.get(b.id) : 1000;
       if (ai !== bi) return ai - bi;
+      // Models has no preferred ids. Keep the order /api/agents returned.
+      if (name === "Models") return (index.get(a.id) ?? 0) - (index.get(b.id) ?? 0);
       return (a.label || "").localeCompare(b.label || "");
     });
     groups.push({ label: name, items });

@@ -1,0 +1,24 @@
+/* Theme files set --mail-* tokens. Tailwind utilities read --color-*.
+   Point the chrome palette at the active theme so a dropdown change
+   repaints surfaces and the accent. Status colors stay put. */
+:root {
+  --color-gray-950: var(--mail-bg-outside);
+  --color-gray-900: var(--mail-bg-page);
+  --color-gray-800: var(--mail-bg-elevated);
+  --color-gray-700: var(--mail-border-strong);
+  --color-gray-600: var(--mail-text-faint);
+  --color-gray-500: var(--mail-text-muted);
+  --color-gray-400: var(--mail-text-icon);
+  --color-gray-300: var(--mail-text-body);
+  --color-gray-200: var(--mail-text);
+  --color-gray-100: var(--mail-text-subject);
+
+  --color-indigo-200: var(--mail-accent-chip);
+  --color-indigo-300: var(--mail-accent-meta);
+  --color-indigo-400: var(--mail-accent-icon);
+  --color-indigo-500: var(--mail-accent);
+  --color-indigo-600: var(--mail-accent-hover);
+  --color-indigo-700: var(--mail-accent);
+  --color-indigo-900: var(--mail-accent);
+  --color-indigo-950: var(--mail-bg-page);
+}

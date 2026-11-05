@@ -137,6 +137,9 @@ export default function ChatView({
   secret,
   historyLoaded = false,
   onSendQuery,
+  promptQueue,
+  onCancelQueued,
+  onRunQueuedNow,
   onConfirm,
   onSecret,
   onCancel,
@@ -393,10 +396,12 @@ export default function ChatView({
 
   const inputProps = {
     onSend: handleSend,
-    disabled: running,
     running,
     connected,
     onCancel,
+    promptQueue,
+    onCancelQueued,
+    onRunQueuedNow,
     profiles,
     onOpenProfiles: () => setModalOpen(true),
     onOpenMemory: () => setMemoryOpen(true),

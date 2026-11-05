@@ -47,6 +47,14 @@ const agents = [
   },
   { id: "plan", type: "built-in", aliases: ["@plan"], description: "Not a custom agent" },
   { id: "health-2", type: "custom", aliases: ["@health"], description: "Second health alias" },
+  {
+    id: "kimi31",
+    type: "custom",
+    aliases: ["@kimi31"],
+    description: "kimi-k3.1-pro:cloud capability test",
+    group: "test_models",
+  },
+  { id: "plain", type: "custom", aliases: ["@plain"], description: "No group" },
 ];
 
 const extra = customModesExceptBuiltins(agents, base);
@@ -60,5 +68,7 @@ assert(ids.includes("docker-ops"), "new alias is kept");
 assert(ids.includes("infra-health"), "new alias is kept");
 assert(!ids.includes("health-2"), "second custom with the same alias is dropped");
 assert(extra.find((mode) => mode.id === "docker-ops").prefix === "@docker ", "prefix from alias");
+assert(extra.find((mode) => mode.id === "kimi31").group === "test_models", "group passes through");
+assert(extra.find((mode) => mode.id === "plain").group === undefined, "missing group stays unset");
 
 console.log("useModes.test.js ok");

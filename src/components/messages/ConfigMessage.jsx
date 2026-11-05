@@ -1,5 +1,6 @@
 export default function ConfigMessage({
   profile,
+  model,
   provider,
   tools,
   sessionId,
@@ -25,6 +26,7 @@ export default function ConfigMessage({
     modeLabel && ["Mode", modeLabel, "text-gray-300"],
     memoryValue && ["Memory", memoryValue, memoryColor],
     ["Profile", profile, "text-gray-300"],
+    model && ["Model", model, "text-gray-200 font-mono"],
     providerLabel && ["Provider", providerLabel, "text-gray-300"],
     ["Tools", `${tools} total`, "text-gray-300"],
     ["Session", sessionId, "text-gray-300"],

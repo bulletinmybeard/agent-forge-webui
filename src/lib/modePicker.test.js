@@ -79,6 +79,15 @@ assert(
 assert(groupFor({ id: "gitlab", connector: true }) === "Connections", "known connector group");
 assert(groupFor({ id: "nope", connector: true }) === "Connections", "unknown connector");
 assert(groupFor({ id: "unknownbot" }) === "Custom", "unknown custom");
+assert(groupFor({ id: "clef" }) === "Custom", "clef is not hardcoded into Models");
+assert(
+  groupFor({ id: "kimi31", group: "test_models" }) === "Models",
+  "test_models is the Models section",
+);
+assert(
+  groupFor({ id: "scratch", group: "bench_models" }) === "Bench Models",
+  "unknown group becomes a section",
+);
 
 const groups = groupModes(modes);
 assert(groups[0].label === "Core", "Core first");
@@ -91,6 +100,21 @@ assert(labels.at(-1) === "Custom", "Custom last");
 assert(!labels.includes("Ops"), "empty groups hidden");
 const custom = groups.find((group) => group.label === "Custom");
 assert(custom.items[0].id === "unknownbot", "unknown lands in Custom");
+
+const modelGroups = groupModes([
+  { id: "clef", label: "Clef", group: "test_models", aliases: "@clef" },
+  { id: "kimi31", label: "Kimi31", group: "test_models", aliases: "@kimi31" },
+  { id: "unknownbot", label: "Zebra", aliases: "@zebra" },
+]);
+const modelSection = modelGroups.find((group) => group.label === "Models");
+assert(
+  modelSection.items.map((mode) => mode.id).join(",") === "clef,kimi31",
+  "Models keeps API order",
+);
+assert(
+  modelGroups.map((group) => group.label).at(-1) === "Custom",
+  "Custom stays last",
+);
 
 assert(pushRecent(["chat", "agent"], "review").join(",") === "review,chat,agent", "push front");
 assert(pushRecent(["review", "chat", "agent", "debug"], "plan").length === 4, "cap at 4");
