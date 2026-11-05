@@ -108,9 +108,21 @@
   cursor: pointer;
 }
 
-.settings-page__field select:focus {
+.settings-page__field select:focus,
+.settings-page__field input:focus {
   outline: none;
   border-color: var(--mail-accent);
+}
+
+.settings-page__field input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--mail-radius-input, 8px);
+  border: 1px solid var(--mail-border-input);
+  background-color: var(--mail-bg-input);
+  color: var(--mail-text);
+  font-size: 14px;
 }
 
 .settings-page__field select option {
@@ -184,6 +196,56 @@
   font-size: 13px;
   line-height: 1.45;
   color: var(--mail-text-secondary);
+}
+
+.account-block {
+  margin-top: 28px;
+}
+
+.account-secret {
+  margin: 14px 0 0;
+  padding: 12px;
+  border-radius: var(--mail-radius-input, 8px);
+  background: var(--mail-bg-input);
+  color: var(--mail-text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.account-secret code {
+  display: block;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.account-list {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--mail-border-input);
+  font-size: 13px;
+}
+
+.account-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.account-meta {
+  display: block;
+  margin-top: 2px;
+  color: var(--mail-text-label);
+  font-size: 12px;
 }
 
 .settings-page__error {

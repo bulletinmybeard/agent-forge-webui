@@ -16,8 +16,8 @@ AgentForge WebUI is a React SPA for [AgentForge](https://github.com/bulletinmybe
 It's a pure frontend: it streams the agent's think > act > observe loop over the backend's `/ws/chat` WebSocket and calls its REST API for sessions, uploads, memory, and configs. It does nothing on its own — a running AgentForge backend is required!
 
 > [!IMPORTANT]
-> **Backend version:** this WebUI needs [AgentForge **v0.18.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.18.0) or newer.
-> **Prompt queue and live progress:** basic prompt queueing works with AgentForge **[≥ v0.17.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0)**. For correct **Run now** cancellation-card ordering and the new model-aware agent, pipeline, parallel-group, and review progress—including persisted model-fallback hops—use the matching [AgentForge **Unreleased** tree](https://github.com/bulletinmybeard/agent-forge).
+> **Backend version:** WebUI **0.9.0** needs [AgentForge **v0.18.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.18.0). The sign-in name is `AGENTFORGE_ADMIN_USERNAME` (default `admin`). The password is `AGENTFORGE_ADMIN_PASSWORD`. There is no email. **Login** as another user uses `POST /api/auth/impersonate`. A 401 from `GET /api/auth/me`, or from a later call other than the login POST, shows the sign-in page. `auth_required: false` leaves the wall down.
+> **Prompt queue and live progress:** basic prompt queueing works with AgentForge **[≥ v0.17.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0)**. Correct **Run now** cancellation-card ordering and the model-aware agent, pipeline, parallel-group, and review progress—including persisted model-fallback hops—shipped in **[v0.18.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.18.0)**.
 
 ## Features
 
@@ -37,6 +37,22 @@ It's a pure frontend: it streams the agent's think > act > observe loop over the
 - Eager file uploads: paperclip, clipboard paste, or drag-and-drop with inline thumbnails. Unset attachments persist across reloads
 - GitHub-flavoured Markdown rendering with fenced-code highlighting, and a Monaco-based inline prompt editor
 - Same-origin proxy for `@trip` maps (`/trips`) alongside `/ws`, `/api`, and `/uploads`
+
+## User accounts
+
+Sign-in, users, and API keys are AgentForge features. This app only calls them. The WebUI does not store passwords or keys.
+
+The deployment admin signs in with `AGENTFORGE_ADMIN_USERNAME` and `AGENTFORGE_ADMIN_PASSWORD` from the AgentForge environment. There is no email. An empty username stays `admin`. Scripts, the macOS app, and browser extensions use `security.api_keys` in AgentForge `config.yaml`. Those keys are the admin user. They are not the WebUI password, and signing in here does not create one. A key created under Settings > Account belongs to the signed-in user. AgentForge stores the hash and shows the secret once.
+
+With the admin password set, nothing in the app loads until `GET /api/auth/me` succeeds. A 401 is the sign-in page. `auth_required: false` leaves the wall down, which is a local AgentForge install with no script keys and no admin password.
+
+An admin can do this in the WebUI:
+
+- Settings > Account shows the signed-in name, logs out, and creates or revokes API keys
+- Settings > Users lists people, creates a user, edits a name or password, and deletes a user. The admin row is listed and cannot be edited or deleted here. Delete removes that user's chats and the rest of their WebUI data on the AgentForge side
+- **Login** on another user's row asks for confirmation, then opens AgentForge as that user. Chats, linked accounts, and cached DB schemas are theirs. A banner at the top names the user and returns to the admin session. **Log out** ends the session instead of returning. Login is not on the admin row, and it is not available while the banner is up
+
+Anyone else signs in with the username and password an admin set. They do not see Users.
 
 ## Getting started
 

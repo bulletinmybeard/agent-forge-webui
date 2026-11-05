@@ -71,7 +71,7 @@ export default function ServicesPage() {
   );
 
   return (
-    <div className="h-screen w-screen flex bg-gray-950 text-gray-100">
+    <div className="h-full w-full min-h-0 flex bg-gray-950 text-gray-100">
       <div className="flex-1 flex flex-col min-w-0">
         <header className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-800">
           <div className="flex items-center gap-4">
