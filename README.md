@@ -47,11 +47,14 @@ The deployment admin signs in with `AGENTFORGE_ADMIN_USERNAME` and `AGENTFORGE_A
 With the admin password set, nothing in the app loads until `GET /api/auth/me` succeeds. A 401 is the sign-in page. `auth_required: false` leaves the wall down, which is a local AgentForge install with no script keys and no admin password.
 
 An admin can do this in the WebUI:
-- Settings > Account shows the signed-in name, logs out, and creates or revokes API keys
+
+- Settings > Account shows the signed-in name, logs out, creates or revokes API keys, and holds model instructions
 - Settings > Users lists people, creates a user, edits a name or password, and deletes a user. The admin row is listed and cannot be edited or deleted here. Delete removes that user's chats and the rest of their WebUI data on the AgentForge side
-- **Login** on another user's row asks for confirmation, then opens AgentForge as that user. Chats, linked accounts, and cached DB schemas are theirs. A banner at the top names the user and returns to the admin session. **Log out** ends the session instead of returning. Login is not on the admin row, and it is not available while the banner is up
+- **Login** on another user's row asks for confirmation, then opens AgentForge as that user. Chats, linked accounts, cached DB schemas, and model instructions are theirs. A banner at the top names the user and returns to the admin session. **Log out** ends the session instead of returning. Login is not on the admin row, and it is not available while the banner is up
 
 Anyone else signs in with the username and password an admin set. They do not see Users.
+
+Model instructions are per person. The admin text is `user_context.md` on the AgentForge server (`user_context` in `config.yaml`). Account shows that text and does not save over the file. Anyone else edits their own text on Account. A `Name:` line sets the first name on the home page. An empty field leaves the greeting without a name.
 
 ## Getting started
 

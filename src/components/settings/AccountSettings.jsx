@@ -15,6 +15,10 @@ export default function AccountSettings() {
   const [keyName, setKeyName] = useState("");
   const [secret, setSecret] = useState("");
   const [error, setError] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [instructionsEditable, setInstructionsEditable] = useState(false);
+  const [instructionsStatus, setInstructionsStatus] = useState("");
+  const [savingInstructions, setSavingInstructions] = useState(false);
 
   const loadKeys = useCallback(async () => {
     const response = await fetch("/api/auth/keys");
@@ -22,10 +26,19 @@ export default function AccountSettings() {
     setKeys(await response.json());
   }, []);
 
+  const loadInstructions = useCallback(async () => {
+    const response = await fetch("/api/auth/instructions");
+    if (!response.ok) return;
+    const body = await response.json();
+    setInstructions(body.text || "");
+    setInstructionsEditable(Boolean(body.editable));
+  }, []);
+
   useEffect(() => {
     if (!me) return;
     loadKeys();
-  }, [me, loadKeys]);
+    loadInstructions();
+  }, [me, loadKeys, loadInstructions]);
 
   if (!me) {
     return (
@@ -67,6 +80,27 @@ export default function AccountSettings() {
     if (response.ok) loadKeys();
   };
 
+  const saveInstructions = async (event) => {
+    event.preventDefault();
+    setError("");
+    setInstructionsStatus("");
+    setSavingInstructions(true);
+    const response = await fetch("/api/auth/instructions", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: instructions }),
+    });
+    const body = await response.json().catch(() => ({}));
+    setSavingInstructions(false);
+    if (!response.ok) {
+      setError(body.detail || "Could not save the instructions.");
+      return;
+    }
+    setInstructions(body.text || "");
+    setInstructionsEditable(Boolean(body.editable));
+    setInstructionsStatus("Saved.");
+  };
+
   return (
     <>
       <h1 className="settings-page__title">Account</h1>
@@ -83,6 +117,37 @@ export default function AccountSettings() {
             Log out
           </button>
         </div>
+      </section>
+
+      <section className="settings-page__section account-block" aria-labelledby="settings-instructions">
+        <h2 id="settings-instructions" className="settings-page__section-title">
+          Model instructions
+        </h2>
+        <p className="settings-page__hint">
+          {instructionsEditable
+            ? "Sent with your prompts. A Name: line sets the first name on the home page. Leave this empty to send none."
+            : "Read from user_context.md on the server. Saving here does not change that file."}
+        </p>
+        <form onSubmit={saveInstructions}>
+          <label className="settings-page__field">
+            <span>Instructions</span>
+            <textarea
+              value={instructions}
+              rows={10}
+              readOnly={!instructionsEditable}
+              onChange={(event) => {
+                setInstructions(event.target.value);
+                setInstructionsStatus("");
+              }}
+            />
+          </label>
+          {instructionsEditable ? (
+            <button type="submit" className="settings-page__button" disabled={savingInstructions}>
+              {savingInstructions ? "Saving..." : "Save"}
+            </button>
+          ) : null}
+        </form>
+        {instructionsStatus ? <p className="settings-page__status">{instructionsStatus}</p> : null}
       </section>
 
       <section className="settings-page__section account-block" aria-labelledby="settings-keys">

@@ -1,7 +1,7 @@
 /**
- *   node src/lib/polledTurn.test.js
+ *   TZ=Europe/Amsterdam node src/lib/polledTurn.test.js
  */
-import { adoptPolledTurn } from "./polledTurn.js";
+import { adoptPolledTurn, messageEpoch } from "./polledTurn.js";
 
 const assert = (cond, msg) => {
   if (!cond) throw new Error(msg || "assert failed");
@@ -117,5 +117,57 @@ const otherPrefixed = adoptPolledTurn(
   { since: sentAt },
 );
 assert(!otherPrefixed.done, "a prefixed bubble does not adopt a different prompt");
+
+// Session 01a1adb4: SQLite wall time is container UTC, with no offset.
+// A CET browser used to read that as local and reject the finished follow-up.
+const naive = "2026-11-05 21:55:14.869";
+const at = messageEpoch(naive);
+const utc = Date.UTC(2026, 10, 5, 21, 55, 14, 869);
+assert(at === utc, `naive chat time is utc, got ${at}`);
+assert(messageEpoch("2026-11-05T21:55:14.869") === utc, "T form is utc");
+assert(messageEpoch("2026-11-05T21:55:14.869Z") === utc, "Z is utc");
+assert(messageEpoch("2026-11-05T21:55:14.869+00:00") === utc, "offset kept");
+assert(
+  messageEpoch("2026-11-05T21:55:14.869000+00:00") === utc,
+  "python microseconds stay on the same instant",
+);
+assert(
+  messageEpoch("2026-11-05T21:55:14.869+01:00") === utc - 3_600_000,
+  "non-utc offset is not rewritten",
+);
+assert(Number.isNaN(messageEpoch(null)), "missing time");
+assert(Number.isNaN(messageEpoch("")), "blank time");
+
+const sentAtFollow = at + 30;
+const followUp = adoptPolledTurn(
+  [{ type: "query", text: "Empty this list", _ts: `${sentAtFollow}-1` }],
+  [
+    { type: "query", text: "Empty this list", _ts: `${at}-1` },
+    { type: "result", text: "done", _ts: `${at + 10000}-2` },
+    { type: "summary", elapsed: 10, _ts: `${at + 10000}-3` },
+  ],
+  passthrough,
+  { since: sentAtFollow },
+);
+assert(followUp.done, "finished follow-up clears the spinner");
+assert(
+  followUp.messages.some((m) => m.text === "done"),
+  "result is shown",
+);
+
+const asLocal = new Date(naive.replace(" ", "T")).getTime();
+if (asLocal !== utc) {
+  const stuck = adoptPolledTurn(
+    [{ type: "query", text: "Empty this list", _ts: `${sentAtFollow}-1` }],
+    [
+      { type: "query", text: "Empty this list", _ts: `${asLocal}-1` },
+      { type: "result", text: "done", _ts: `${asLocal + 10000}-2` },
+      { type: "summary", elapsed: 10, _ts: `${asLocal + 10000}-3` },
+    ],
+    passthrough,
+    { since: sentAtFollow },
+  );
+  assert(!stuck.done, "browser-local parse of a utc stamp stays on the spinner");
+}
 
 console.log("polledTurn.test.js ok");

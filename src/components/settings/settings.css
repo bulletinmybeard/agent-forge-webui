@@ -109,7 +109,8 @@
 }
 
 .settings-page__field select:focus,
-.settings-page__field input:focus {
+.settings-page__field input:focus,
+.settings-page__field textarea:focus {
   outline: none;
   border-color: var(--mail-accent);
 }
@@ -123,6 +124,24 @@
   background-color: var(--mail-bg-input);
   color: var(--mail-text);
   font-size: 14px;
+}
+
+.settings-page__field textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 10px 12px;
+  border-radius: var(--mail-radius-input, 8px);
+  border: 1px solid var(--mail-border-input);
+  background-color: var(--mail-bg-input);
+  color: var(--mail-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.settings-page__field textarea[readonly] {
+  opacity: 0.85;
 }
 
 .settings-page__field select option {

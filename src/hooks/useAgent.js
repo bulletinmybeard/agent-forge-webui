@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { v7 as uuidv7 } from "uuid";
+import { sessionGone, showChatUnavailable } from "../lib/chatNotice";
 import { isPendingFileDiff, upsertFileDiffMessage } from "../lib/fileDiff";
 import { isPlanAwaitingApproval, isPlanDocumentResult } from "../lib/planDocument";
-import { adoptPolledTurn } from "../lib/polledTurn";
+import { adoptPolledTurn, messageEpoch } from "../lib/polledTurn";
 import { dropPrompt, enqueuePrompt, shiftPrompt, takePrompt } from "../lib/promptQueue";
 import ws from "../lib/ws";
 import useRecap from "./useRecap";
@@ -12,6 +13,7 @@ const DRAIN_MS = 150;
 
 export const useAgent = () => {
   const { sessionId: urlSessionId } = useParams();
+  const navigate = useNavigate();
 
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -222,13 +224,27 @@ export const useAgent = () => {
       ? `/api/sessions/${urlSessionId}/messages/around?ts=${anchorEpoch}&window=25`
       : `/api/sessions/${urlSessionId}/messages?limit=50`;
 
+    let cancelled = false;
+
     Promise.all([
-      fetch(`/api/sessions/${urlSessionId}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/sessions/${urlSessionId}`).then(async (r) => {
+        if (sessionGone(r.status)) return { kind: "gone" };
+        if (!r.ok) return { kind: "error" };
+        return { kind: "ok", session: await r.json() };
+      }),
       fetch(messagesUrl).then((r) =>
         r.ok ? r.json() : { messages: [], has_more: false, oldest_sequence: 0 },
       ),
       fetch(`/api/commands/session/${urlSessionId}`).then((r) => (r.ok ? r.json() : [])),
-    ]).then(([session, pageData, notes]) => {
+    ]).then(([sessionResult, pageData, notes]) => {
+      if (cancelled) return;
+      // 404 is gone or not ours. The notice does not say which. The API log does.
+      if (sessionResult.kind === "gone") {
+        showChatUnavailable();
+        navigate("/", { replace: true });
+        return;
+      }
+      const session = sessionResult.kind === "ok" ? sessionResult.session : null;
       if (session) {
         setSessionTitle(session.title || "");
         setSessionInfo((prev) => ({
@@ -275,7 +291,11 @@ export const useAgent = () => {
       historyReadyRef.current = true;
       setHistoryLoaded(true);
     });
-  }, [urlSessionId, setRunningTracked]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [urlSessionId, setRunningTracked, navigate]);
 
   useEffect(() => {
     if (!historyReadyRef.current) return;
@@ -2023,14 +2043,14 @@ const restoreMessages = (dbMessages) => {
           type: "query",
           text: msg.content || meta.text || "",
           attachments: meta.attachments || [],
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
       case "routing":
         restored.push({
           type: "routing",
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2040,7 +2060,7 @@ const restoreMessages = (dbMessages) => {
           profile: meta.profile,
           reason: meta.reason,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2055,7 +2075,7 @@ const restoreMessages = (dbMessages) => {
           sessionId: meta.session_id,
           memory_tier: meta.memory_tier,
           noHistory: !!meta.no_history,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2065,7 +2085,7 @@ const restoreMessages = (dbMessages) => {
           type: "tool_calls",
           calls: meta.calls || [],
           _restored: true,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2081,7 +2101,7 @@ const restoreMessages = (dbMessages) => {
           additions: meta.additions,
           deletions: meta.deletions,
           diff_text: meta.diff_text,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         };
         const merged = upsertFileDiffMessage(restored, card);
         restored.length = 0;
@@ -2095,7 +2115,7 @@ const restoreMessages = (dbMessages) => {
           requestId: meta.request_id,
           prompt: meta.prompt || msg.content || "",
           kind: meta.kind || "",
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2112,7 +2132,7 @@ const restoreMessages = (dbMessages) => {
           prompt: meta.prompt || msg.content || "",
           confirmed: meta.confirmed,
           timedOut: !!meta.timed_out,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
       }
@@ -2124,7 +2144,7 @@ const restoreMessages = (dbMessages) => {
             type: "tool_calls",
             calls: msg.tool_calls,
             _restored: true,
-            _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+            _ts: `${messageEpoch(msg.created_at)}-${seq}`,
           });
           seq++;
         }
@@ -2135,7 +2155,7 @@ const restoreMessages = (dbMessages) => {
             elapsed: meta.elapsed,
             plan_path: meta.plan_path,
             plan_target: meta.plan_target,
-            _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+            _ts: `${messageEpoch(msg.created_at)}-${seq}`,
           }),
         );
         break;
@@ -2144,7 +2164,7 @@ const restoreMessages = (dbMessages) => {
         restored.push({
           type: "recap",
           text: msg.content || meta.text || "",
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2156,7 +2176,7 @@ const restoreMessages = (dbMessages) => {
           toolCalls: meta.tool_calls,
           tools: meta.tools,
           models: meta.models,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2165,7 +2185,7 @@ const restoreMessages = (dbMessages) => {
           type: "error",
           message: msg.content || meta.message || "",
           recoverable: meta.recoverable,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2184,7 +2204,7 @@ const restoreMessages = (dbMessages) => {
           search_elapsed: meta.search_elapsed || 0,
           is_sticky: meta.is_sticky || false,
           parsed_query: meta.parsed_query || null,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2193,7 +2213,7 @@ const restoreMessages = (dbMessages) => {
           type: "discovery_scope",
           areas: meta.areas || [],
           elapsed: meta.elapsed || 0,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2205,7 +2225,7 @@ const restoreMessages = (dbMessages) => {
             total_reclaimable: meta.plan.total_reclaimable || meta.total_reclaimable || "",
             recommendations: meta.plan.recommendations || meta.recommendations || [],
             elapsed: meta.elapsed || 0,
-            _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+            _ts: `${messageEpoch(msg.created_at)}-${seq}`,
           });
         } else if (meta.recommendations) {
           restored.push({
@@ -2214,7 +2234,7 @@ const restoreMessages = (dbMessages) => {
             total_reclaimable: meta.total_reclaimable || "",
             recommendations: meta.recommendations || [],
             elapsed: meta.elapsed || 0,
-            _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+            _ts: `${messageEpoch(msg.created_at)}-${seq}`,
           });
         }
         break;
@@ -2228,7 +2248,7 @@ const restoreMessages = (dbMessages) => {
             progress: meta.progress || {},
             aggregation: meta.aggregation || null,
           },
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2241,7 +2261,7 @@ const restoreMessages = (dbMessages) => {
           reason: meta.reason,
           delaySeconds: meta.delay_seconds,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2254,7 +2274,7 @@ const restoreMessages = (dbMessages) => {
           attempt: meta.attempt,
           maxRetries: meta.max_retries,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2266,7 +2286,7 @@ const restoreMessages = (dbMessages) => {
           consecutiveErrors: meta.consecutive_errors,
           searchQuery: meta.search_query,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2277,7 +2297,7 @@ const restoreMessages = (dbMessages) => {
           category: meta.category,
           message: meta.message,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2287,7 +2307,7 @@ const restoreMessages = (dbMessages) => {
           source: meta.source,
           plan: meta.plan,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2296,7 +2316,7 @@ const restoreMessages = (dbMessages) => {
           type: "parallel_plan",
           groups: meta.groups || [],
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2310,7 +2330,7 @@ const restoreMessages = (dbMessages) => {
           next_model: meta.next_model,
           reason: meta.reason,
           provider: meta.provider,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2323,7 +2343,7 @@ const restoreMessages = (dbMessages) => {
           cron_human: meta.cron_human,
           command: meta.command,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2332,7 +2352,7 @@ const restoreMessages = (dbMessages) => {
           type: "scheduler.guard_rejected",
           command: meta.command,
           verdict: meta.verdict,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2348,7 +2368,7 @@ const restoreMessages = (dbMessages) => {
           css_selector: meta.css_selector,
           initial_snapshot: meta.initial_snapshot,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2358,7 +2378,7 @@ const restoreMessages = (dbMessages) => {
           job_id: meta.job_id,
           fields: meta.fields,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2368,7 +2388,7 @@ const restoreMessages = (dbMessages) => {
           job_id: meta.job_id,
           label: meta.label,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
@@ -2382,7 +2402,7 @@ const restoreMessages = (dbMessages) => {
           lines_added: meta.lines_added,
           lines_removed: meta.lines_removed,
           elapsed: meta.elapsed,
-          _ts: `${new Date(msg.created_at).getTime()}-${seq}`,
+          _ts: `${messageEpoch(msg.created_at)}-${seq}`,
         });
         break;
 
