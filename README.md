@@ -16,15 +16,16 @@ AgentForge WebUI is a React SPA for [AgentForge](https://github.com/bulletinmybe
 It's a pure frontend: it streams the agent's think > act > observe loop over the backend's `/ws/chat` WebSocket and calls its REST API for sessions, uploads, memory, and configs. It does nothing on its own — a running AgentForge backend is required!
 
 > [!IMPORTANT]
-> **Backend version:** WebUI **0.9.0** needs [AgentForge **v0.18.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.18.0). The sign-in name is `AGENTFORGE_ADMIN_USERNAME` (default `admin`). The password is `AGENTFORGE_ADMIN_PASSWORD`. There is no email. **Login** as another user uses `POST /api/auth/impersonate`. A 401 from `GET /api/auth/me`, or from a later call other than the login POST, shows the sign-in page. `auth_required: false` leaves the wall down.
+> **Backend version:** WebUI **0.10.0** needs [AgentForge **v0.20.0**](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.20.0). The sign-in name is `AGENTFORGE_ADMIN_USERNAME` (default `admin`). The password is `AGENTFORGE_ADMIN_PASSWORD`. There is no email. **Login** as another user uses `POST /api/auth/impersonate`. A 401 from `GET /api/auth/me`, or from a later call other than the login POST, shows the sign-in page. `auth_required: false` leaves the wall down.
 > **Prompt queue and live progress:** basic prompt queueing works with AgentForge **[≥ v0.17.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0)**. Correct **Run now** cancellation-card ordering and the model-aware agent, pipeline, parallel-group, and review progress—including persisted model-fallback hops—shipped in **[v0.18.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.18.0)**.
+> **Revised shell command:** the Tools card updates when `tool.call.revised` arrives. That event shipped in **[v0.20.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.20.0)**. An older server never sends it, so the card keeps the command the model sent.
 
 ## Features
 
 - Streaming chat over the `/ws/chat` WebSocket, with the full think > act > observe event stream rendered live. The status line names the model call in flight, the current tool, and the quiet stages (routing, planning, synthesis, review specialists, parallel groups)
 - Prompt queue: the composer stays enabled during a run. A submit waits and runs after the current turn finishes. Each queued prompt can be removed, or run now (stop the current turn and start that one). Stop still cancels the run and drops the queue
 - Mode picker for the `@mode` prefixes (chat, docs, search, agent, sql, logs, discover, pipeline, review, research, coding, plan, build, film, scheduler, monitor, connectors, and custom agents including `@trip`), each with its own colour. Mode and profile overrides are per-session; new chats start clean
-- Per-event message cards: routing, config (including the model), tool calls, confirm + secret dialogs, results, summaries, errors, search metadata, discovery, research, scheduler/monitor jobs, file diffs, agent warning/recovery/retry/escalation, model fallback, review progress, coding plan, parallel plan, refined prompt, and session compaction
+- Per-event message cards: routing, config (including the model), tool calls (a `shell` row updates when `tool.call.revised` names the command that ran; needs AgentForge 0.20.0), confirm + secret dialogs, results, summaries, errors, search metadata, discovery, research, scheduler/monitor jobs, file diffs, agent warning/recovery/retry/escalation, model fallback, review progress, coding plan, parallel plan, refined prompt, and session compaction
 - **Command Permissions** modal: manage shell/SSH allowlist, denylist, and confirm policy (runtime overrides on the AgentForge backend), plus named **profiles** (YAML baseline, blank slate, builtins `tight`/`open`, save-as / delete user profiles)
 - Connectors UI: connect and manage multi-account Google (Gmail, Drive, BigQuery, YouTube), GitLab, and GitHub connections, with per-connection product/permission display and an in-place read/write toggle
 - Canvas workspace for pinned snippets, results, and queries
@@ -47,11 +48,13 @@ The deployment admin signs in with `AGENTFORGE_ADMIN_USERNAME` and `AGENTFORGE_A
 With the admin password set, nothing in the app loads until `GET /api/auth/me` succeeds. A 401 is the sign-in page. `auth_required: false` leaves the wall down, which is a local AgentForge install with no script keys and no admin password.
 
 An admin can do this in the WebUI:
-- Settings > Account shows the signed-in name, logs out, and creates or revokes API keys
+- Settings > Account shows the signed-in name, logs out, creates or revokes API keys, and holds model instructions
 - Settings > Users lists people, creates a user, edits a name or password, and deletes a user. The admin row is listed and cannot be edited or deleted here. Delete removes that user's chats and the rest of their WebUI data on the AgentForge side
-- **Login** on another user's row asks for confirmation, then opens AgentForge as that user. Chats, linked accounts, and cached DB schemas are theirs. A banner at the top names the user and returns to the admin session. **Log out** ends the session instead of returning. Login is not on the admin row, and it is not available while the banner is up
+- **Login** on another user's row asks for confirmation, then opens AgentForge as that user. Chats, linked accounts, cached DB schemas, and model instructions are theirs. A banner at the top names the user and returns to the admin session. **Log out** ends the session instead of returning. Login is not on the admin row, and it is not available while the banner is up
 
 Anyone else signs in with the username and password an admin set. They do not see Users.
+
+Model instructions are per person. The admin text is `user_context.md` on the AgentForge server (`user_context` in `config.yaml`). Account shows that text and does not save over the file. Anyone else edits their own text on Account. A `Name:` line sets the first name on the home page. An empty field leaves the greeting without a name.
 
 ## Getting started
 

@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { debugSessionUrl } from "../lib/debugSession";
 
 const fmtTokens = (n) => {
   if (!n || n <= 0) return "~";
@@ -8,8 +9,15 @@ const fmtTokens = (n) => {
   return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
 };
 
-export default function StatusBar({ connected, sessionInfo = {}, sessionTitle, contextUsage }) {
+export default function StatusBar({
+  connected,
+  sessionInfo = {},
+  sessionTitle,
+  contextUsage,
+  sessionId,
+}) {
   const settingsActive = useLocation().pathname.startsWith("/settings");
+  const debugUrl = debugSessionUrl(sessionId || sessionInfo.sessionId);
   const tokenUsage = contextUsage?.token_usage;
   const hasTokenUsage = tokenUsage !== undefined && tokenUsage !== null;
   const totalFmt = hasTokenUsage ? fmtTokens(tokenUsage?.total_tokens) : null;
@@ -36,6 +44,16 @@ export default function StatusBar({ connected, sessionInfo = {}, sessionTitle, c
         >
           Services
         </a>
+        {debugUrl && (
+          <a
+            href={debugUrl}
+            className="text-sm font-semibold shrink-0 no-underline text-amber-400 hover:text-amber-300 transition-colors"
+            title="Open this chat in AgentForge Debug"
+            aria-label="Debug Chat session"
+          >
+            Debug
+          </a>
+        )}
         {sessionTitle && (
           <span className="text-xs text-gray-400 truncate" title={sessionTitle}>
             {sessionTitle}

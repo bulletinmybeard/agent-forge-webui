@@ -1,8 +1,87 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { splitInlineCode } from "../../lib/inlineCode";
+import { fenceDisplay, parsePrompt, proseDisplay } from "../../lib/promptBlocks";
 import CopyButton from "../CopyButton";
 import EditButton from "../EditButton";
 import InlinePromptEditor from "../InlinePromptEditor";
 import RetryButton from "../RetryButton";
+
+function PromptProse({ text }) {
+  return splitInlineCode(text).map((part, index) => {
+    if (part.type !== "code") return <span key={index}>{part.value}</span>;
+    return (
+      <code key={index} className="prompt-sent-code">
+        {part.value}
+      </code>
+    );
+  });
+}
+
+function PromptBody({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  const [seen, setSeen] = useState(text);
+  const [overflows, setOverflows] = useState(false);
+  const bodyRef = useRef(null);
+  const blocks = useMemo(() => parsePrompt(text), [text]);
+
+  if (text !== seen) {
+    setSeen(text);
+    setExpanded(false);
+  }
+
+  // setExpanded(false) does not retrigger this when the prompt was already collapsed.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: text retriggers the measure
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (!el || expanded) return;
+    setOverflows(el.scrollHeight > el.clientHeight + 1);
+  }, [text, expanded]);
+
+  const clamped = !expanded;
+
+  return (
+    <div>
+      <div className="text-gray-500">Prompt:</div>
+      <div
+        ref={bodyRef}
+        className={[
+          "prompt-sent-body",
+          clamped && "prompt-sent-clamped",
+          clamped && overflows && "prompt-sent-fade",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {blocks.map((block, index) => {
+          if (block.type === "fence") {
+            return (
+              <pre key={index} className="prompt-sent-fence">
+                {block.lang ? <span className="prompt-sent-fence-lang">{block.lang}</span> : null}
+                <code>{fenceDisplay(block)}</code>
+              </pre>
+            );
+          }
+          const display = proseDisplay(blocks, index);
+          if (display === "") return null;
+          return (
+            <p key={index} className="prompt-sent-prose">
+              <PromptProse text={display} />
+            </p>
+          );
+        })}
+      </div>
+      {overflows && (
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          className="mt-1 block text-left text-xs text-gray-400 hover:text-gray-200 hover:underline underline-offset-2 bg-transparent border-0 cursor-pointer p-0"
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 const formatTsTime = (ts) => {
   if (!ts) return "";
@@ -52,14 +131,69 @@ export default function QueryMessage({
   return (
     <div id={anchorId} className="text-gray-500 text-sm py-1 space-y-1.5">
       <div className="flex items-start justify-between gap-2">
-        <div
-          className={`flex items-baseline gap-1.5 min-w-0 flex-wrap${isEditing ? " flex-1" : ""}`}
-        >
-          {timeStr && (
-            <span className="text-[10px] text-gray-600 font-mono tabular-nums flex-shrink-0">
-              {timeStr}
-            </span>
-          )}
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
+            {timeStr && (
+              <span className="text-[10px] text-gray-600 font-mono tabular-nums flex-shrink-0">
+                {timeStr}
+              </span>
+            )}
+
+            {anchorId && (
+              <a
+                href={`#${anchorId}`}
+                onClick={handleAnchorClick}
+                title="Copy link to this message"
+                className="text-gray-700 hover:text-indigo-400 transition-colors flex-shrink-0
+                         text-xs font-mono opacity-0 group-hover:opacity-100
+                         hover:opacity-100 focus:opacity-100"
+                style={{ opacity: undefined }}
+              >
+                #
+              </a>
+            )}
+
+            {onPinAnchor && anchorId && (
+              <button
+                type="button"
+                onClick={() => onPinAnchor(text)}
+                title="Pin this message to canvas"
+                className="text-gray-700 hover:text-indigo-400 transition-colors flex-shrink-0
+                         text-[10px] font-mono opacity-0 group-hover:opacity-100
+                         hover:opacity-100 focus:opacity-100 bg-transparent border-0 cursor-pointer
+                         px-0"
+              >
+                pin
+              </button>
+            )}
+
+            {nonImageAttachments.length > 0 && (
+              <span className={text ? "ml-1" : ""}>
+                <span className="inline-flex items-center gap-1 flex-wrap">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="inline text-gray-600"
+                  >
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                  </svg>
+                  {nonImageAttachments.map((a, i) => (
+                    <span key={i} className="text-gray-400">
+                      {a.name}
+                      {i < nonImageAttachments.length - 1 ? "," : ""}
+                    </span>
+                  ))}
+                </span>
+              </span>
+            )}
+          </div>
 
           {isEditing ? (
             <InlinePromptEditor
@@ -71,62 +205,7 @@ export default function QueryMessage({
               onCancel={() => setIsEditing(false)}
             />
           ) : (
-            text && <span className="break-words">Prompt: &ldquo;{text}&rdquo;</span>
-          )}
-
-          {anchorId && (
-            <a
-              href={`#${anchorId}`}
-              onClick={handleAnchorClick}
-              title="Copy link to this message"
-              className="text-gray-700 hover:text-indigo-400 transition-colors flex-shrink-0
-                         text-xs font-mono opacity-0 group-hover:opacity-100
-                         hover:opacity-100 focus:opacity-100"
-              style={{ opacity: undefined }}
-            >
-              #
-            </a>
-          )}
-
-          {onPinAnchor && anchorId && (
-            <button
-              type="button"
-              onClick={() => onPinAnchor(text)}
-              title="Pin this message to canvas"
-              className="text-gray-700 hover:text-indigo-400 transition-colors flex-shrink-0
-                         text-[10px] font-mono opacity-0 group-hover:opacity-100
-                         hover:opacity-100 focus:opacity-100 bg-transparent border-0 cursor-pointer
-                         px-0"
-            >
-              pin
-            </button>
-          )}
-
-          {nonImageAttachments.length > 0 && (
-            <span className={text ? "ml-1" : ""}>
-              <span className="inline-flex items-center gap-1 flex-wrap">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="inline text-gray-600"
-                >
-                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-                </svg>
-                {nonImageAttachments.map((a, i) => (
-                  <span key={i} className="text-gray-400">
-                    {a.name}
-                    {i < nonImageAttachments.length - 1 ? "," : ""}
-                  </span>
-                ))}
-              </span>
-            </span>
+            text && <PromptBody text={text} />
           )}
         </div>
 

@@ -50,6 +50,18 @@ function queryTime(message) {
   return Number.isFinite(ms) ? ms : null;
 }
 
+// SQLite stores a naive timestamp. The chat API now sends an offset; older
+// payloads do not. Those are container UTC. Parsing them as the browser's
+// local time makes a finished follow-up look an hour old, so the poller
+// never clears "Agent is working...".
+export function messageEpoch(createdAt) {
+  if (createdAt == null || createdAt === "") return Number.NaN;
+  const raw = String(createdAt).trim();
+  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(raw);
+  const iso = hasZone ? raw : `${raw.includes("T") ? raw : raw.replace(" ", "T")}Z`;
+  return new Date(iso).getTime();
+}
+
 function queryIsFresh(restored, since) {
   const at = queryTime(lastQuery(restored));
   if (at === null) return true;

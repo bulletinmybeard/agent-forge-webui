@@ -13,6 +13,7 @@ export default function ChatPage() {
       <StatusBar
         connected={agent.connected}
         sessionInfo={agent.sessionInfo}
+        sessionId={agent.sessionId}
         sessionTitle={agent.sessionTitle}
         contextUsage={agent.contextUsage}
       />

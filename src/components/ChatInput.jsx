@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { rememberRecentMode } from "../lib/modePicker";
 import HelpModal from "./HelpModal";
 import ModeSelector from "./ModeSelector";
-import PromptHighlight from "./PromptHighlight";
+import PromptEditor from "./PromptEditor";
 import PromptQueue from "./PromptQueue";
 import ProviderSelector from "./ProviderSelector";
 
@@ -80,7 +80,6 @@ export default function ChatInput({
   const [helpOpen, setHelpOpen] = useState(false);
   const [showOffline, setShowOffline] = useState(false);
   const inputRef = useRef(null);
-  const highlightRef = useRef(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -155,13 +154,6 @@ export default function ChatInput({
   const contextPercent = Math.min(((usedTokens + estimatedNewTokens) / maxTokens) * 100, 100);
   const attachDisabled = inputLocked || atFileLimit || wouldExceedContext;
 
-  const autoResize = useCallback(() => {
-    const el = inputRef.current;
-    if (!el) return;
-    el.style.height = "auto"; // reset to measure scrollHeight
-    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
-  }, []);
-
   const handleSubmit = (e) => {
     e.preventDefault();
     const trimmed = text.trim();
@@ -181,12 +173,7 @@ export default function ChatInput({
     if (selectedMode) rememberRecentMode(selectedMode);
     onSend(trimmed);
     setText("");
-    requestAnimationFrame(() => {
-      if (inputRef.current) {
-        inputRef.current.style.height = "auto";
-      }
-    });
-    inputRef.current?.focus();
+    requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const handleKeyDown = (e) => {
@@ -196,7 +183,7 @@ export default function ChatInput({
       return;
     }
 
-    const el = inputRef.current;
+    const el = e.currentTarget;
     if (e.key === "ArrowUp" && historyRef.current.length > 0) {
       const hasNewlines = text.includes("\n");
       const atStart = el && el.selectionStart === 0 && el.selectionEnd === 0;
@@ -210,11 +197,10 @@ export default function ChatInput({
           historyIdxRef.current--;
         }
         setText(hist[historyIdxRef.current]);
-        requestAnimationFrame(autoResize);
       }
     } else if (e.key === "ArrowDown" && historyIdxRef.current !== -1) {
       const hasNewlines = text.includes("\n");
-      const atEnd = el && el.selectionStart === text.length;
+      const atEnd = el && el.selectionStart === el.value.length;
       if (!hasNewlines && (atEnd || text === "")) {
         e.preventDefault();
         const hist = historyRef.current;
@@ -225,7 +211,6 @@ export default function ChatInput({
           historyIdxRef.current = -1;
           setText(draftRef.current);
         }
-        requestAnimationFrame(autoResize);
       }
     }
   };
@@ -245,8 +230,7 @@ export default function ChatInput({
       if (matched) onModeChange(matched.id);
     }
     setText(preset.message);
-    requestAnimationFrame(autoResize);
-    inputRef.current?.focus();
+    requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const skillAliasMap = useMemo(() => {
@@ -272,8 +256,7 @@ export default function ChatInput({
     return map;
   }, [modes]);
 
-  const handleInput = (e) => {
-    const newText = e.target.value;
+  const applyText = (newText) => {
     if (onModeChange && newText.includes(" ")) {
       const lower = newText.toLowerCase();
       for (const [prefix, modeId] of prefixMap) {
@@ -282,14 +265,12 @@ export default function ChatInput({
           const rest = newText.slice(prefix.length);
           setText(rest);
           _detectSkillAliases(rest);
-          requestAnimationFrame(autoResize);
           return;
         }
       }
     }
     setText(newText);
     _detectSkillAliases(newText);
-    autoResize();
   };
 
   const _detectSkillAliases = (text) => {
@@ -967,25 +948,13 @@ export default function ChatInput({
                               : "border-gray-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
                           }`}
             >
-              <div
-                ref={highlightRef}
-                aria-hidden
-                className="prompt-highlight pointer-events-none absolute inset-0 overflow-y-auto px-3 py-2
-                           text-sm leading-relaxed whitespace-pre-wrap text-gray-100"
-              >
-                <PromptHighlight text={text} />
-              </div>
-              <textarea
+              <PromptEditor
                 ref={inputRef}
-                rows={1}
                 value={text}
-                onChange={handleInput}
+                onChange={applyText}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
-                onScroll={(e) => {
-                  if (highlightRef.current)
-                    highlightRef.current.scrollTop = e.currentTarget.scrollTop;
-                }}
+                disabled={inputLocked}
                 placeholder={
                   offline
                     ? "Disconnected — reconnecting to AgentForge…"
@@ -1003,13 +972,6 @@ export default function ChatInput({
                                 ? "Ask the agent..."
                                 : `${modes.find((m) => m.id === selectedMode)?.label} mode — describe your task...`
                 }
-                disabled={inputLocked}
-                autoFocus
-                className="prompt-input relative w-full px-3 py-2 bg-transparent rounded-lg
-                           placeholder-gray-500 focus:outline-none
-                           disabled:cursor-not-allowed
-                           text-sm resize-none overflow-y-auto leading-relaxed whitespace-pre-wrap"
-                style={{ maxHeight: 200 }}
               />
             </div>
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import BottyWidget from "./BottyWidget";
+import ChatNotice from "./ChatNotice";
 import Sidebar from "./Sidebar";
 
 const SIDEBAR_KEY = "chat_sidebar_collapsed";
@@ -23,6 +24,7 @@ export default function ChatLayout() {
     <div className="flex h-full min-h-0 bg-gray-900">
       {settings ? null : <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggle} />}
       <main className="flex-1 flex flex-col min-h-0 min-w-0 relative">
+        <ChatNotice />
         <Outlet />
       </main>
       <BottyWidget />

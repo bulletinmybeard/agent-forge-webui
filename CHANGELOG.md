@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-14
+
+### Added
+
+- Account → Model instructions. A signed-in user edits the text sent with their prompts. A `Name:` line sets the first name on the home page. An empty field leaves that greeting without a name. The admin field is read-only and shows `user_context.md`. Saving does not change that file. While logged in as another user, the field is that user's text
+- **Debug** in the header, after Services, while a chat is open. Amber. Opens `agentforgedebug://<session-id>` in AgentForge Debug. The id is the host. No session, no link
+- `node src/lib/debugSession.test.js` covers which ids become that URL
+- A fenced code block in the composer is its own field. The ``` markers stay out of that field, and the language sits above it. Backspace in an empty fence removes it. Arrow keys move between the prose and the fence. The stored prompt is still one string. Inline code in the prose stays highlighted
+- A sent prompt uses the same split: inline code, fenced blocks, and the rest as text. A long prompt is clamped until **Show more**
+- `node src/lib/promptBlocks.test.js` covers fence parsing and the round trip back into the stored string
+
+### Changed
+
+- The Tools card replaces a `shell` command when `tool.call.revised` arrives. It matches the tool name and `match_command`, then shows the command that ran. A revision that arrives first waits for that `tool.call`. A card already flushed in this session is patched the same way. A reload shows the command the server stored. This needs [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[0.20.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.20.0)**. An older server never sends the event, so the card keeps the command the model sent
+
+### Fixed
+
+- A chat URL that does not open returns to `/` and shows "This chat isn't available." The notice goes away after 10 seconds, or when dismissed. It does not say why. `node src/lib/chatNotice.test.js` covers that text and the timer
+- Restored messages read an offset-less `created_at` as UTC before the poller checks that a finished follow-up belongs to this send. A browser on CET was treating the container clock as local, so the status line stayed on "Agent is working..." after the answer was already stored
+- `node src/lib/polledTurn.test.js` covers an offset-less timestamp read as UTC
+
 ## [0.9.0] - 2026-11-05
 
 Needs [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[v0.18.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.18.0)**. The sign-in name is `AGENTFORGE_ADMIN_USERNAME` on the API (default `admin`). The password is `AGENTFORGE_ADMIN_PASSWORD`. There is no email.
