@@ -90,8 +90,8 @@ export default function AccountSettings() {
           API keys
         </h2>
         <p className="settings-page__hint">
-          For a Mac app, a browser extension, or a script. The secret is shown once. A key stays
-          on this user.
+          For a Mac app, a browser extension, or a script. The secret is shown once. A key stays on
+          this user.
         </p>
         <form onSubmit={createKey}>
           <label className="settings-page__field">
@@ -115,7 +115,11 @@ export default function AccountSettings() {
                 {key.name} <code>{key.prefix}</code>
                 <span className="account-meta">last used {formatWhen(key.last_used_at)}</span>
               </span>
-              <button type="button" className="settings-page__button" onClick={() => revoke(key.id)}>
+              <button
+                type="button"
+                className="settings-page__button"
+                onClick={() => revoke(key.id)}
+              >
                 Revoke
               </button>
             </li>
