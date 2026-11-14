@@ -111,10 +111,7 @@ assert(
   modelSection.items.map((mode) => mode.id).join(",") === "clef,kimi31",
   "Models keeps API order",
 );
-assert(
-  modelGroups.map((group) => group.label).at(-1) === "Custom",
-  "Custom stays last",
-);
+assert(modelGroups.map((group) => group.label).at(-1) === "Custom", "Custom stays last");
 
 assert(pushRecent(["chat", "agent"], "review").join(",") === "review,chat,agent", "push front");
 assert(pushRecent(["review", "chat", "agent", "debug"], "plan").length === 4, "cap at 4");

@@ -160,10 +160,6 @@
   font-size: 0.8em;
   line-height: 2;
 }
-.markdown-content ul ul li::before {
-  content: "◦";
-  color: var(--mail-accent-meta, #4f46e5);
-}
 
 .markdown-content ol {
   list-style: none;
@@ -187,6 +183,10 @@
   line-height: 2;
   min-width: 1.4em;
   text-align: right;
+}
+.markdown-content ul ul li::before {
+  content: "◦";
+  color: var(--mail-accent-meta, #4f46e5);
 }
 
 /* biome-ignore lint/style/noDescendingSpecificity: .prose and .markdown-content are separate scopes */

@@ -91,10 +91,7 @@ const prefixed = adoptPolledTurn(
   { since: sentAt },
 );
 assert(prefixed.done, "mode prefix on the bubble is the same turn");
-assert(
-  prefixed.messages[0].text.startsWith("@cloud"),
-  "the typed bubble stays",
-);
+assert(prefixed.messages[0].text.startsWith("@cloud"), "the typed bubble stays");
 assert(prefixed.messages.at(-1).type === "summary", "prefixed turn adopts the tail");
 
 const stale = adoptPolledTurn(

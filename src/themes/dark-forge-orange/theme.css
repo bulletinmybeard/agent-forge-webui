@@ -185,7 +185,7 @@
   --mail-success-fill: rgba(63, 185, 80, 0.2);
   --mail-success-line: rgba(107, 203, 138, 0.45);
   --mail-accent-a06: rgba(240, 136, 62, 0.06);
-  --mail-accent-a10: rgba(240, 136, 62, 0.10);
+  --mail-accent-a10: rgba(240, 136, 62, 0.1);
   --mail-accent-a12: rgba(240, 136, 62, 0.12);
   --mail-accent-a16: rgba(240, 136, 62, 0.16);
   --mail-accent-a18: rgba(240, 136, 62, 0.18);
@@ -193,20 +193,34 @@
   --mail-selection-bg: rgba(240, 136, 62, 0.18);
 
   /* Avatar tones. Index matches avatarColorsFor(). */
-  --avatar-0-bg: #1e4fa3; --avatar-0-fg: #cfe0f8;
-  --avatar-1-bg: #8a4a1f; --avatar-1-fg: #f6dcc6;
-  --avatar-2-bg: #6d3ba8; --avatar-2-fg: #e6d6f8;
-  --avatar-3-bg: #1d6b4f; --avatar-3-fg: #cbeedd;
-  --avatar-4-bg: #2a4a7c; --avatar-4-fg: #d3e2f7;
-  --avatar-5-bg: #7a3560; --avatar-5-fg: #f5d6e8;
-  --avatar-6-bg: #2b2f3a; --avatar-6-fg: #e2c8b4;
-  --avatar-7-bg: #3b2a5c; --avatar-7-fg: #cfc0ee;
-  --avatar-8-bg: #5c2340; --avatar-8-fg: #f2c3da;
-  --avatar-9-bg: #14483a; --avatar-9-fg: #b7e8d4;
-  --avatar-10-bg: #4a2c14; --avatar-10-fg: #f0cba6;
-  --avatar-11-bg: #52215c; --avatar-11-fg: #ecc2f2;
-  --avatar-12-bg: #3a2a10; --avatar-12-fg: #ecd8ad;
-  --avatar-13-bg: #1b3a52; --avatar-13-fg: #bcdcf0;
+  --avatar-0-bg: #1e4fa3;
+  --avatar-0-fg: #cfe0f8;
+  --avatar-1-bg: #8a4a1f;
+  --avatar-1-fg: #f6dcc6;
+  --avatar-2-bg: #6d3ba8;
+  --avatar-2-fg: #e6d6f8;
+  --avatar-3-bg: #1d6b4f;
+  --avatar-3-fg: #cbeedd;
+  --avatar-4-bg: #2a4a7c;
+  --avatar-4-fg: #d3e2f7;
+  --avatar-5-bg: #7a3560;
+  --avatar-5-fg: #f5d6e8;
+  --avatar-6-bg: #2b2f3a;
+  --avatar-6-fg: #e2c8b4;
+  --avatar-7-bg: #3b2a5c;
+  --avatar-7-fg: #cfc0ee;
+  --avatar-8-bg: #5c2340;
+  --avatar-8-fg: #f2c3da;
+  --avatar-9-bg: #14483a;
+  --avatar-9-fg: #b7e8d4;
+  --avatar-10-bg: #4a2c14;
+  --avatar-10-fg: #f0cba6;
+  --avatar-11-bg: #52215c;
+  --avatar-11-fg: #ecc2f2;
+  --avatar-12-bg: #3a2a10;
+  --avatar-12-fg: #ecd8ad;
+  --avatar-13-bg: #1b3a52;
+  --avatar-13-fg: #bcdcf0;
 
   /* Sidebar label swatches when the provider has no color. */
   --label-swatch-0: #4d94f5;

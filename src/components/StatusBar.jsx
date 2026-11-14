@@ -8,12 +8,7 @@ const fmtTokens = (n) => {
   return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
 };
 
-export default function StatusBar({
-  connected,
-  sessionInfo = {},
-  sessionTitle,
-  contextUsage,
-}) {
+export default function StatusBar({ connected, sessionInfo = {}, sessionTitle, contextUsage }) {
   const settingsActive = useLocation().pathname.startsWith("/settings");
   const tokenUsage = contextUsage?.token_usage;
   const hasTokenUsage = tokenUsage !== undefined && tokenUsage !== null;

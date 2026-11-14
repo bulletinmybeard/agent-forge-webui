@@ -44,7 +44,10 @@ assert(
     "Searching done",
   "pipeline done",
 );
-assert(describeAgentStatus({ phase: "pipeline_done" }).text === "Done", "pipeline done with no step");
+assert(
+  describeAgentStatus({ phase: "pipeline_done" }).text === "Done",
+  "pipeline done with no step",
+);
 
 assert(
   describeAgentStatus({ phase: "parallel", detail: { text: "deps · 2 commands" } }).text ===
@@ -64,8 +67,8 @@ assert(calling.text === "Calling qwen3.5 · 4 messages", "model call names the m
 assert(calling.iterLabel === "Iteration 2/10", "agent phases keep the iteration");
 
 assert(
-  describeAgentStatus({ phase: "thinking", model: "qwen3.5", purpose: "final", messages: 6 }).text ===
-    "Calling qwen3.5 for the final answer · 6 messages",
+  describeAgentStatus({ phase: "thinking", model: "qwen3.5", purpose: "final", messages: 6 })
+    .text === "Calling qwen3.5 for the final answer · 6 messages",
   "final answer purpose",
 );
 assert(
@@ -73,7 +76,10 @@ assert(
     "Calling qwen3.5",
   "zero messages stays off the line",
 );
-assert(describeAgentStatus({ phase: "thinking" }).text === "Thinking...", "thinking without a model");
+assert(
+  describeAgentStatus({ phase: "thinking" }).text === "Thinking...",
+  "thinking without a model",
+);
 assert(
   describeAgentStatus({ phase: "thinking", iteration: 1 }).iterLabel === "Iteration 1",
   "iteration without a max",
@@ -96,7 +102,8 @@ assert(
   "tool arg truncates at 40",
 );
 assert(
-  describeAgentStatus({ phase: "tool_running", detail: { name: "shell" } }).text === "Running shell",
+  describeAgentStatus({ phase: "tool_running", detail: { name: "shell" } }).text ===
+    "Running shell",
   "tool with no args",
 );
 

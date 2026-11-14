@@ -11,8 +11,9 @@ function argPreview(args) {
 }
 
 export default function CodingPlanMessage({ source, plan, elapsed }) {
-  const steps = (plan && plan.steps) || [];
-  const sourceLabel = source === "planner" ? "Planner" : source === "template" ? "Template" : source;
+  const steps = plan?.steps || [];
+  const sourceLabel =
+    source === "planner" ? "Planner" : source === "template" ? "Template" : source;
 
   return (
     <div className="mb-3 mx-2">
