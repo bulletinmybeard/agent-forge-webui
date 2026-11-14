@@ -4,12 +4,17 @@ import useDocumentTitle from "../../hooks/useDocumentTitle";
 import useWsConnected from "../../hooks/useWsConnected";
 import { persistTheme, readStoredThemeId } from "../../lib/theme";
 import { resolveThemeId, THEMES } from "../../themes/registry";
+import { useAuth } from "../AuthGate";
 import StatusBar from "../StatusBar";
+import AccountSettings from "./AccountSettings";
 import DataSettings from "./DataSettings";
+import UsersSettings from "./UsersSettings";
 import "./settings.css";
 
 const SECTIONS = [
   { id: "appearance", label: "Appearance", to: "/settings" },
+  { id: "account", label: "Account", to: "/settings/account" },
+  { id: "users", label: "Users", to: "/settings/users", admin: true },
   { id: "data", label: "Data", to: "/settings/data" },
 ];
 
@@ -49,15 +54,19 @@ function AppearanceSettings() {
 export default function SettingsPage() {
   useDocumentTitle("Settings");
   const connected = useWsConnected();
+  const me = useAuth();
   const { pathname } = useLocation();
   const dataPage = pathname === "/settings/data" || pathname === "/settings/data/";
+  const accountPage = pathname === "/settings/account" || pathname === "/settings/account/";
+  const usersPage = pathname === "/settings/users" || pathname === "/settings/users/";
+  const sections = SECTIONS.filter((section) => !section.admin || me?.is_admin);
 
   return (
     <div className="flex flex-col h-full min-h-0">
       <StatusBar connected={connected} />
       <div className="settings-page">
         <nav className="settings-page__nav" aria-label="Settings">
-          {SECTIONS.map((section) => (
+          {sections.map((section) => (
             <NavLink
               key={section.id}
               to={section.to}
@@ -72,7 +81,15 @@ export default function SettingsPage() {
         </nav>
 
         <div className="settings-page__content">
-          {dataPage ? <DataSettings /> : <AppearanceSettings />}
+          {usersPage ? (
+            <UsersSettings />
+          ) : accountPage ? (
+            <AccountSettings />
+          ) : dataPage ? (
+            <DataSettings />
+          ) : (
+            <AppearanceSettings />
+          )}
         </div>
       </div>
     </div>

@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-05
+
+Needs [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[v0.18.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.18.0)**. The sign-in name is `AGENTFORGE_ADMIN_USERNAME` on the API (default `admin`). The password is `AGENTFORGE_ADMIN_PASSWORD`. There is no email.
+
+### Added
+
+- Login wall. On load, `GET /api/auth/me`. A 401 shows the sign-in page. When the API reports `auth_required: false`, the wall stays down
+- Account at `/settings/account`: who is signed in, log out, create and revoke API keys. The secret is shown once
+- Users at `/settings/users`, shown to an admin only. List, create, and edit open in a modal. Delete asks for confirmation. The deployment admin row is listed and cannot be edited or deleted from here
+- **Login** on another user's row, before Edit and Delete. Confirmation, then the session becomes that user and the app loads `/`
+- A banner on every page while that session is active: who is signed in, and **Return to** the admin username. Account **Log out** still ends the session and does not return to the admin
+- `node src/lib/auth.test.js` covers which 401 responses send the UI back to the login page
+
+### Changed
+
+- A 401 from a later API call, other than the login POST, returns to the sign-in page
+
 ## [0.8.0] - 2026-11-05
 
 ### Added

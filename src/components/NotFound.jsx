@@ -5,7 +5,7 @@ export default function NotFound() {
   useDocumentTitle("Page not found");
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950 text-gray-200 px-6">
+    <div className="flex h-full min-h-0 flex-col items-center justify-center bg-gray-950 text-gray-200 px-6">
       <p className="text-5xl font-semibold text-gray-100">404</p>
       <p className="mt-3 text-gray-400 text-sm">This page doesn&apos;t exist.</p>
       <Link
