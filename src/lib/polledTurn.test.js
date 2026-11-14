@@ -75,4 +75,47 @@ const otherQuery = adoptPolledTurn(
 assert(!otherQuery.done, "a different query is not this turn");
 assert(otherQuery.messages.at(-1).requestId === "c1", "passive merge still runs");
 
+const sentAt = 1_700_000_000_000;
+const prefixed = adoptPolledTurn(
+  [{ type: "query", text: "@cloud Check my #putio for one of the Mortal Kombat movies" }],
+  [
+    {
+      type: "query",
+      text: "Check my #putio for one of the Mortal Kombat movies",
+      _ts: `${sentAt + 2000}-1`,
+    },
+    { type: "result", text: "none", _ts: `${sentAt + 3000}-2` },
+    { type: "summary", elapsed: 4, _ts: `${sentAt + 4000}-3` },
+  ],
+  passthrough,
+  { since: sentAt },
+);
+assert(prefixed.done, "mode prefix on the bubble is the same turn");
+assert(prefixed.messages[0].text.startsWith("@cloud"), "the typed bubble stays");
+assert(prefixed.messages.at(-1).type === "summary", "prefixed turn adopts the tail");
+
+const stale = adoptPolledTurn(
+  [{ type: "query", text: "@film cup sizes" }],
+  [
+    { type: "query", text: "cup sizes", _ts: `${sentAt - 60_000}-1` },
+    { type: "result", text: "old", _ts: `${sentAt - 50_000}-2` },
+    { type: "summary", elapsed: 1, _ts: `${sentAt - 40_000}-3` },
+  ],
+  passthrough,
+  { since: sentAt },
+);
+assert(!stale.done, "a settled row from before this send is not this turn");
+
+const otherPrefixed = adoptPolledTurn(
+  [{ type: "query", text: "@film mine" }],
+  [
+    { type: "query", text: "theirs", _ts: `${sentAt + 1000}-1` },
+    { type: "result", text: "nope", _ts: `${sentAt + 2000}-2` },
+    { type: "summary", elapsed: 1, _ts: `${sentAt + 3000}-3` },
+  ],
+  passthrough,
+  { since: sentAt },
+);
+assert(!otherPrefixed.done, "a prefixed bubble does not adopt a different prompt");
+
 console.log("polledTurn.test.js ok");

@@ -18,11 +18,42 @@ function afterLastQuery(messages) {
   return messages.slice(start + 1);
 }
 
-function queryText(messages) {
+function lastQuery(messages) {
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].type === "query") return messages[i].text || "";
+    if (messages[i].type === "query") return messages[i];
   }
   return null;
+}
+
+function queryText(messages) {
+  const query = lastQuery(messages);
+  return query ? query.text || "" : null;
+}
+
+const MODE_PREFIX = /^\s*@[\w:-]+\s+/;
+const CLOCK_SKEW_MS = 15000;
+
+function stripModePrefix(text) {
+  return text.replace(MODE_PREFIX, "").trim();
+}
+
+function queriesMatch(prevQuery, dbQuery) {
+  if (prevQuery === dbQuery) return true;
+  const prevStripped = stripModePrefix(prevQuery);
+  const dbStripped = stripModePrefix(dbQuery);
+  return prevStripped.length > 0 && prevStripped === dbStripped;
+}
+
+function queryTime(message) {
+  if (!message || message._ts == null) return null;
+  const ms = Number(String(message._ts).split("-")[0]);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function queryIsFresh(restored, since) {
+  const at = queryTime(lastQuery(restored));
+  if (at === null) return true;
+  return at >= since - CLOCK_SKEW_MS;
 }
 
 function awaitingPlan(tail) {
@@ -47,16 +78,23 @@ function turnSettled(tail) {
  * @param {Array} prev live messages
  * @param {Array} restored messages restored from the latest poll page
  * @param {(prev: Array, restored: Array) => Array} mergePassive merge (confirms, diffs)
+ * @param {{ since?: number }} [opts] client time when this send started. A settled
+ *   row older than that is the previous turn (Run now, or a retry whose write
+ *   has not landed yet).
  * @returns {{ messages: Array, done: boolean }}
  */
-export function adoptPolledTurn(prev, restored, mergePassive) {
+export function adoptPolledTurn(prev, restored, mergePassive, opts) {
   const dbTail = afterLastQuery(restored);
   if (!dbTail || awaitingPlan(dbTail) || !turnSettled(dbTail)) {
     return { messages: mergePassive(prev, restored), done: false };
   }
   const prevQuery = queryText(prev);
   const dbQuery = queryText(restored);
-  if (prevQuery !== null && dbQuery !== null && prevQuery !== dbQuery) {
+  if (prevQuery !== null && dbQuery !== null && !queriesMatch(prevQuery, dbQuery)) {
+    return { messages: mergePassive(prev, restored), done: false };
+  }
+  const since = opts && typeof opts.since === "number" ? opts.since : null;
+  if (since !== null && !queryIsFresh(restored, since)) {
     return { messages: mergePassive(prev, restored), done: false };
   }
   let cut = prev.length;

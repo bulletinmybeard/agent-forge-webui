@@ -7,7 +7,7 @@ export default function PromptHighlight({ text }) {
     return (
       <span
         key={index}
-        className="rounded bg-[#1e293b] text-[#c4b5fd] shadow-[inset_0_0_0_1px_#334155] [box-decoration-break:clone]"
+        className="rounded bg-[var(--mail-bg-elevated)] text-[var(--mail-accent-chip)] shadow-[inset_0_0_0_1px_var(--mail-border-strong)] [box-decoration-break:clone]"
       >
         <span className="text-transparent">`</span>
         {part.value}

@@ -42,6 +42,7 @@ const deriveCustom = (agent) => {
     aliases: aliases.join(", "),
     desc: (agent.description || "").split(". ")[0].slice(0, 80),
     connector: agent.source === "connector",
+    ...(typeof agent.group === "string" && agent.group.trim() ? { group: agent.group.trim() } : {}),
     ...colorForCustom(agent.id),
   };
 };

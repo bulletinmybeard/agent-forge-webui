@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-05
+
+### Added
+
+- Settings at `/settings`, opened from the gear to the right of the API status dot. Replaces the chat and hides the session list. Left nav, first section Appearance
+- Theme dropdown under Appearance > Theme. Themes taken from agent-forge-email: Dark Forge, Dark Forge bw, Dark Forge Orange, Dark Forge Orange v2. Choice stored in `localStorage` as `agentforge:theme` (default `dark-forge`)
+- Add a theme by copying `src/themes/dark-forge` and registering it in `src/themes/index.js`
+- `node src/themes/registry.test.js` covers theme id resolution
+- The status line names the in-flight model call (`Calling <model> · N messages`, or `for the final answer`), plus routing, pipeline steps, parallel groups, and review specialists. The config card shows the model
+- Cards for review progress, the coding plan, the parallel plan, and a refined opening prompt. Coding plans, parallel plans, and model-fallback hops restore after reload
+- Prompt queue. The composer stays enabled while a turn is running. Submit snapshots the prompt (text, attachments, mode prefix, profile overrides, incognito, provider) and sends it after the turn goes idle. Each queued row can be dropped, or run now, which cancels the current turn and starts that prompt immediately. Stop cancels the run and clears the queue. Switching sessions clears it. Run now's cancel card is ordered by the matching [AgentForge](https://github.com/bulletinmybeard/agent-forge) Unreleased tree; the queue itself works against **[≥ 0.17.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0)**
+- `node src/lib/promptQueue.test.js` covers the queue operations (append, drop, take one, shift head)
+
+### Changed
+
+- Gray surfaces and the indigo accent follow the active theme. Status colors (connected dot, errors, warnings) stay put
+
 ## [0.7.0] - 2026-10-24
 
 Needs [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[≥ 0.17.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.17.0)** for `@film` / `@movie` / `@movies`: TMDB lookup, the local `film_db` library, and recommend-similar.

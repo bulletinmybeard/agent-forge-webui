@@ -1,0 +1,238 @@
+/* dark-forge graphite: neutral charcoal variant with a graphite accent. */
+[data-theme="dark-forge-bw"] {
+  /* Form controls (select) follow system appearance unless set — keep dark. */
+  color-scheme: dark;
+
+  /* Global spacing / shape */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 22px;
+  --global-component-padding: var(--space-md);
+  --global-component-round-corners: var(--radius-xl);
+
+  /* Surfaces */
+  --mail-bg-page: #0b0c0e;
+  --mail-bg-sidebar: #0c0d0f;
+  --mail-bg-list: #0e0f11;
+  --mail-bg-reading: #0a0b0d;
+  --mail-bg-input: #141518;
+  --mail-bg-hover: #17181b;
+  --mail-bg-hover-icon: #1b1c20;
+  --mail-bg-row-hover: #151619;
+  --mail-bg-outside: #070809;
+  --mail-bg-elevated: #191a1d;
+  --mail-bg-panel: #1f2024;
+  --mail-bg-menu: var(--mail-bg-elevated);
+
+  /* Borders */
+  --mail-border: #1a1b1e;
+  --mail-border-strong: #25262a;
+  --mail-border-input: #2a2b30;
+  --mail-border-row: #17181b;
+  --mail-border-footer: #1a1b1e;
+
+  /* Text */
+  --mail-text: #e7e7e8;
+  --mail-text-subject: #f3f3f4;
+  --mail-text-body: #cccccf;
+  --mail-text-secondary: #b5b5b8;
+  --mail-text-list-subject: #d1d1d4;
+  --mail-text-muted: #77787c;
+  --mail-text-label: #67686c;
+  --mail-text-faint: #56575c;
+  --mail-text-placeholder: #4a4b50;
+  --mail-text-icon: #919297;
+  --mail-text-icon-soft: #74757a;
+  --mail-text-inverse: #ffffff;
+
+  /* Accent */
+  --mail-accent: #8e8e93;
+  --mail-accent-hover: #a3a3a8;
+  --mail-accent-icon: #aaaab0;
+  --mail-accent-meta: #b7b7bc;
+  --mail-accent-chip: #d0d0d4;
+  --mail-accent-fill-sidebar: rgba(142, 142, 147, 0.14);
+  --mail-accent-fill-list: rgba(142, 142, 147, 0.16);
+  --mail-accent-fill-soft: rgba(142, 142, 147, 0.16);
+
+  /* Semantic status */
+  --mail-danger: #e06c75;
+  --mail-danger-hover: #f07178;
+  --mail-danger-bg: #3a1d22;
+  --mail-danger-border: #6b2f38;
+  --mail-danger-text: #f2c3ca;
+  --mail-warning: #e8b84a;
+  --mail-warning-bg: #3a3220;
+  --mail-warning-border: #6b5a30;
+  --mail-warning-text: #f0d9a0;
+  --mail-success-bg: #1a3228;
+  --mail-success-border: #2d5a45;
+  --mail-success-text: #b7e8d4;
+
+  /* Type */
+  --mail-font: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  --mail-fs-base: 13px;
+
+  /* Layout */
+  --mail-sidebar-width: 236px;
+  --mail-list-width: 372px;
+  --mail-header-height: 44px;
+  --mail-radius-row: 7px;
+  --mail-radius-input: var(--radius-md);
+  --mail-radius-icon: var(--radius-sm);
+  --mail-selection-edge: inset 2px 0 0 var(--mail-accent);
+
+  /* Component aliases (compose, menus, …) */
+  --composer-padding: var(--global-component-padding);
+  --composer-background-color: var(--mail-bg-elevated);
+  --composer-background-round-corners: var(--global-component-round-corners);
+  --composer-border-color: var(--mail-border-strong);
+  --menu-background: var(--mail-bg-menu);
+  --menu-radius: var(--radius-lg);
+  --menu-border: var(--mail-border-strong);
+  --menu-item-hover: var(--mail-bg-hover);
+  --menu-danger: var(--mail-danger-hover);
+
+  /* Motion */
+  --mail-ease: 120ms ease;
+
+  /* Scrollbars */
+  --mail-scrollbar: #2a2b30;
+
+  /* Reading pane (shadow DOM inherits these) */
+  --mail-text-heading: #ebebec;
+  --mail-text-quote: #a0a1a5;
+  --mail-quote-bar: var(--mail-text-placeholder);
+  --mail-code-bg: rgba(0, 0, 0, 0.28);
+  --mail-blocked-bg: rgba(74, 75, 80, 0.25);
+  --mail-blocked-outline: var(--mail-text-placeholder);
+  --mail-cid-missing-bg: rgba(232, 184, 74, 0.08);
+  --mail-cid-missing-outline: var(--mail-warning-border);
+  --mail-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --mail-fs-reading: 14px;
+
+  /* Search operator chips */
+  --mail-op-from: #3d8bf5;
+  --mail-op-from-text: #6eafff;
+  --mail-op-from-chip: #9ec5ff;
+  --mail-op-to: #5b8def;
+  --mail-op-to-text: #7eb0ff;
+  --mail-op-to-chip: #b4cfff;
+  --mail-op-subject: #a78bfa;
+  --mail-op-subject-text: #c4b0ff;
+  --mail-op-subject-chip: #d4c4ff;
+  --mail-op-in: #f0a050;
+  --mail-op-in-text: #ffb86c;
+  --mail-op-in-chip: #ffd0a0;
+  --mail-op-flag: #4ade80;
+  --mail-op-flag-text: #7ddea0;
+  --mail-op-flag-chip: #b6f0c8;
+  --mail-op-date: #f07178;
+  --mail-op-date-text: #ff9aa2;
+  --mail-op-date-chip: #ffc0c4;
+
+  /* Status tones that are not the base danger/warning pair */
+  --mail-danger-bg-deep: #2a161a;
+  --mail-danger-strong: #8b2e38;
+  --mail-danger-strong-hover: #a63a46;
+  --mail-danger-on-strong: #fce8ea;
+  --mail-danger-text-soft: #f0a0a6;
+  --mail-danger-text-muted: #e8a0a8;
+  --mail-warning-hot: #e8a23a;
+  --mail-warning-border-hot: #8a6a2f;
+  --mail-success: #6bcb8a;
+  --mail-success-bright: #3fb950;
+  --mail-danger-bright: #f85149;
+  --mail-info: #4493f8;
+  --mail-important: #ab7df8;
+  --mail-caution: #d4a72c;
+
+  /* Translucent fills */
+  --mail-black-a10: rgba(0, 0, 0, 0.1);
+  --mail-black-a12: rgba(0, 0, 0, 0.12);
+  --mail-black-a14: rgba(0, 0, 0, 0.14);
+  --mail-black-a18: rgba(0, 0, 0, 0.18);
+  --mail-black-a20: rgba(0, 0, 0, 0.2);
+  --mail-black-a35: rgba(0, 0, 0, 0.35);
+  --mail-black-a40: rgba(0, 0, 0, 0.4);
+  --mail-black-a45: rgba(0, 0, 0, 0.45);
+  --mail-black-a55: rgba(0, 0, 0, 0.55);
+  --mail-black-a60: rgba(0, 0, 0, 0.6);
+  --mail-white-a03: rgba(255, 255, 255, 0.03);
+  --mail-white-a04: rgba(255, 255, 255, 0.04);
+  --mail-white-a06: rgba(255, 255, 255, 0.06);
+  --mail-white-a08: rgba(255, 255, 255, 0.08);
+  --mail-white-a12: rgba(255, 255, 255, 0.12);
+  --mail-white-a20: rgba(255, 255, 255, 0.2);
+  --mail-overlay: rgba(5, 5, 6, 0.62);
+  --mail-overlay-soft: rgba(5, 5, 6, 0.55);
+  --mail-gray-a10: rgba(127, 127, 127, 0.1);
+  --mail-gray-a12: rgba(127, 127, 127, 0.12);
+  --mail-gray-a14: rgba(127, 127, 127, 0.14);
+  --mail-danger-fill: rgba(224, 108, 117, 0.12);
+  --mail-danger-fill-hot: rgba(240, 113, 120, 0.12);
+  --mail-danger-line: rgba(240, 113, 120, 0.45);
+  --mail-danger-line-strong: rgba(240, 113, 120, 0.5);
+  --mail-danger-hot-fill: rgba(248, 81, 73, 0.2);
+  --mail-warning-fill: rgba(227, 179, 65, 0.12);
+  --mail-warning-line: rgba(232, 162, 58, 0.4);
+  --mail-warning-line-strong: rgba(232, 162, 58, 0.45);
+  --mail-success-fill: rgba(63, 185, 80, 0.2);
+  --mail-success-line: rgba(107, 203, 138, 0.45);
+  --mail-accent-a06: rgba(142, 142, 147, 0.06);
+  --mail-accent-a10: rgba(142, 142, 147, 0.1);
+  --mail-accent-a12: rgba(142, 142, 147, 0.12);
+  --mail-accent-a16: rgba(142, 142, 147, 0.16);
+  --mail-accent-a18: rgba(142, 142, 147, 0.18);
+  --mail-accent-a28: rgba(142, 142, 147, 0.28);
+  --mail-selection-bg: rgba(142, 142, 147, 0.18);
+
+  /* Avatar tones. Index matches avatarColorsFor(). */
+  --avatar-0-bg: #1e4fa3;
+  --avatar-0-fg: #cfe0f8;
+  --avatar-1-bg: #8a4a1f;
+  --avatar-1-fg: #f6dcc6;
+  --avatar-2-bg: #6d3ba8;
+  --avatar-2-fg: #e6d6f8;
+  --avatar-3-bg: #1d6b4f;
+  --avatar-3-fg: #cbeedd;
+  --avatar-4-bg: #2a4a7c;
+  --avatar-4-fg: #d3e2f7;
+  --avatar-5-bg: #7a3560;
+  --avatar-5-fg: #f5d6e8;
+  --avatar-6-bg: #2b2f3a;
+  --avatar-6-fg: #e2c8b4;
+  --avatar-7-bg: #3b2a5c;
+  --avatar-7-fg: #cfc0ee;
+  --avatar-8-bg: #5c2340;
+  --avatar-8-fg: #f2c3da;
+  --avatar-9-bg: #14483a;
+  --avatar-9-fg: #b7e8d4;
+  --avatar-10-bg: #4a2c14;
+  --avatar-10-fg: #f0cba6;
+  --avatar-11-bg: #52215c;
+  --avatar-11-fg: #ecc2f2;
+  --avatar-12-bg: #3a2a10;
+  --avatar-12-fg: #ecd8ad;
+  --avatar-13-bg: #1b3a52;
+  --avatar-13-fg: #bcdcf0;
+
+  /* Sidebar label swatches when the provider has no color. */
+  --label-swatch-0: #4d94f5;
+  --label-swatch-1: #e8a23a;
+  --label-swatch-2: #9b7bed;
+  --label-swatch-3: #3dba7a;
+  --label-swatch-4: #e86b8a;
+  --label-swatch-5: #5ec4d4;
+  --label-swatch-6: #c97b4a;
+  --label-swatch-7: #6f8cff;
+  --label-swatch-8: #d4a017;
+  --label-swatch-9: #b06bd4;
+  --label-swatch-10: #4a9e6e;
+  --label-swatch-11: #e07050;
+}

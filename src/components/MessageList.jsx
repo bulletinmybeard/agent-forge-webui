@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { describeAgentStatus } from "../lib/agentStatus";
 import { isPendingFileDiff } from "../lib/fileDiff";
 import AgentEscalationMessage from "./messages/AgentEscalationMessage";
 import AgentRecoveryMessage from "./messages/AgentRecoveryMessage";
 import AgentRetryMessage from "./messages/AgentRetryMessage";
 import AgentWarningMessage from "./messages/AgentWarningMessage";
 import CancelledMessage from "./messages/CancelledMessage";
+import CodingPlanMessage from "./messages/CodingPlanMessage";
 import CompactedMessage from "./messages/CompactedMessage";
 import CompactingMessage from "./messages/CompactingMessage";
 import ConfigMessage from "./messages/ConfigMessage";
@@ -16,11 +18,14 @@ import ErrorMessage from "./messages/ErrorMessage";
 import FileDiffMessage from "./messages/FileDiffMessage";
 import ModelFallbackMessage from "./messages/ModelFallbackMessage";
 import MonitorJobMessage from "./messages/MonitorJobMessage";
+import ParallelPlanMessage from "./messages/ParallelPlanMessage";
 import PlanDocumentMessage from "./messages/PlanDocumentMessage";
+import PromptRefinedMessage from "./messages/PromptRefinedMessage";
 import QueryMessage from "./messages/QueryMessage";
 import RecapMessage from "./messages/RecapMessage";
 import ResearchPlanMessage from "./messages/ResearchPlanMessage";
 import ResultMessage from "./messages/ResultMessage";
+import ReviewProgressMessage from "./messages/ReviewProgressMessage";
 import RoutingMessage from "./messages/RoutingMessage";
 import SchedulerJobMessage from "./messages/SchedulerJobMessage";
 import SearchMetaMessage from "./messages/SearchMetaMessage";
@@ -58,6 +63,10 @@ const MESSAGE_COMPONENTS = {
   "monitor.job_deleted": MonitorJobMessage,
   "monitor.check_completed": MonitorJobMessage,
   research_plan: ResearchPlanMessage,
+  review_progress: ReviewProgressMessage,
+  coding_plan: CodingPlanMessage,
+  parallel_plan: ParallelPlanMessage,
+  prompt_refined: PromptRefinedMessage,
   cancelled: CancelledMessage,
   compacting: CompactingMessage,
   compacted: CompactedMessage,
@@ -65,56 +74,18 @@ const MESSAGE_COMPONENTS = {
 };
 
 const AgentStatusLine = ({ status }) => {
-  if (!status) {
-    return (
-      <div className="flex items-center gap-2 text-gray-500 text-sm py-1">
-        <span className="inline-block w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
-        Agent is working...
-      </div>
-    );
-  }
-
-  const { iteration, maxIterations, phase, detail } = status;
-
-  if (phase === "pipeline_running" || phase === "pipeline_done") {
-    const stepName = detail?.step || "";
-    const stepLabel = stepName.charAt(0).toUpperCase() + stepName.slice(1);
-    const text =
-      phase === "pipeline_running" ? detail?.text || `${stepLabel}...` : `${stepLabel} done`;
-
-    return (
-      <div className="flex items-center gap-2 text-gray-500 text-sm py-1">
-        <span className="inline-block w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
-        <span>{text}</span>
-      </div>
-    );
-  }
-
-  const iterLabel = maxIterations
-    ? `Iteration ${iteration}/${maxIterations}`
-    : `Iteration ${iteration}`;
-
-  let phaseText = "";
-  if (phase === "thinking" || phase === "iterating") {
-    phaseText = "Thinking...";
-  } else if (phase === "tool_running" && detail) {
-    const argPreview = detail.args ? Object.values(detail.args)[0] || "" : "";
-    const truncated = argPreview.length > 60 ? `${argPreview.slice(0, 57)}...` : argPreview;
-    phaseText = truncated ? `Running ${detail.name}("${truncated}")` : `Running ${detail.name}`;
-  } else if (phase === "tool_done" && detail) {
-    const size =
-      detail.outputChars > 1000
-        ? `${(detail.outputChars / 1024).toFixed(1)}KB`
-        : `${detail.outputChars} chars`;
-    phaseText = detail.isError ? `${detail.name} failed` : `${detail.name} done (${size})`;
-  }
+  const { iterLabel, text } = describeAgentStatus(status);
 
   return (
     <div className="flex items-center gap-2 text-gray-500 text-sm py-1">
       <span className="inline-block w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
-      <span className="text-gray-400">{iterLabel}</span>
-      <span className="text-gray-600">—</span>
-      <span>{phaseText}</span>
+      {iterLabel ? (
+        <>
+          <span className="text-gray-400">{iterLabel}</span>
+          <span className="text-gray-600">—</span>
+        </>
+      ) : null}
+      <span>{text}</span>
     </div>
   );
 };
