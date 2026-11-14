@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A sent prompt uses the same split: inline code, fenced blocks, and the rest as text. A long prompt is clamped until **Show more**
 - `node src/lib/promptBlocks.test.js` covers fence parsing and the round trip back into the stored string
 
+### Changed
+
+- The Tools card replaces a `shell` command when `tool.call.revised` arrives. It matches the tool name and `match_command`, then shows the command that ran. A revision that arrives first waits for that `tool.call`. A card already flushed in this session is patched the same way. A reload shows the command the server stored. This needs [AgentForge](https://github.com/bulletinmybeard/agent-forge) **[0.20.0](https://github.com/bulletinmybeard/agent-forge/releases/tag/v0.20.0)**. An older server never sends the event, so the card keeps the command the model sent
+
 ### Fixed
 
 - A chat URL that does not open returns to `/` and shows "This chat isn't available." The notice goes away after 10 seconds, or when dismissed. It does not say why. `node src/lib/chatNotice.test.js` covers that text and the timer

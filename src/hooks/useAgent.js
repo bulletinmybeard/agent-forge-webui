@@ -440,9 +440,28 @@ export const useAgent = () => {
       }
     };
 
+    const pendingCommandRevisionsRef = { current: [] };
+
+    const applyCommandRevision = (entry, revision) => ({
+      ...entry,
+      args: { ...(entry.args || {}), ...(revision.args || {}) },
+      _commandRevised: true,
+    });
+
+    const takeMatchingRevision = (entry) => {
+      const pending = pendingCommandRevisionsRef.current;
+      const idx = pending.findIndex(
+        (rev) => rev.name === entry.name && entry.args?.command === rev.match_command,
+      );
+      if (idx === -1) return entry;
+      const [rev] = pending.splice(idx, 1);
+      return applyCommandRevision(entry, rev);
+    };
+
     const onToolCall = (msg) => {
-      const entry = { name: msg.name, args: msg.args };
+      let entry = { name: msg.name, args: msg.args };
       if (msg.guard) entry.guard = msg.guard;
+      entry = takeMatchingRevision(entry);
       toolBufferRef.current.push(entry);
 
       if (liveToolCallsTsRef.current === null) {
@@ -465,6 +484,55 @@ export const useAgent = () => {
           ),
         );
       }
+    };
+
+    const onToolCallRevised = (msg) => {
+      if (!msg?.match_command) return;
+      const liveTs = liveToolCallsTsRef.current;
+      const bufferIdx = toolBufferRef.current.findIndex(
+        (call) =>
+          !call._commandRevised &&
+          call.name === msg.name &&
+          call.args?.command === msg.match_command,
+      );
+      if (bufferIdx !== -1) {
+        const next = toolBufferRef.current.slice();
+        next[bufferIdx] = applyCommandRevision(next[bufferIdx], msg);
+        toolBufferRef.current = next;
+        if (liveTs) {
+          setMessages((prev) =>
+            prev.map((m) => (m._ts === liveTs ? { ...m, calls: next } : m)),
+          );
+        }
+        return;
+      }
+      if (liveTs) {
+        pendingCommandRevisionsRef.current.push(msg);
+        return;
+      }
+
+      pendingCommandRevisionsRef.current.push(msg);
+      setMessages((prev) => {
+        for (let i = prev.length - 1; i >= 0; i--) {
+          if (prev[i].type !== "tool_calls") continue;
+          const idx = (prev[i].calls || []).findIndex(
+            (call) =>
+              !call._commandRevised &&
+              call.name === msg.name &&
+              call.args?.command === msg.match_command,
+          );
+          if (idx === -1) continue;
+          const calls = prev[i].calls.slice();
+          calls[idx] = applyCommandRevision(calls[idx], msg);
+          const copy = prev.slice();
+          copy[i] = { ...prev[i], calls };
+          const pending = pendingCommandRevisionsRef.current;
+          const held = pending.indexOf(msg);
+          if (held !== -1) pending.splice(held, 1);
+          return copy;
+        }
+        return prev;
+      });
     };
 
     const onToolFlush = () => flushTools();
@@ -1216,6 +1284,7 @@ export const useAgent = () => {
     ws.on("agent.routed", onRouted);
     ws.on("agent.config", onConfig);
     ws.on("tool.call", onToolCall);
+    ws.on("tool.call.revised", onToolCallRevised);
     ws.on("tool.calls.flush", onToolFlush);
     ws.on("confirm.request", onConfirmRequest);
     ws.on("confirm_prompt", onConfirmRequest);
@@ -1294,6 +1363,7 @@ export const useAgent = () => {
       ws.off("agent.routed", onRouted);
       ws.off("agent.config", onConfig);
       ws.off("tool.call", onToolCall);
+      ws.off("tool.call.revised", onToolCallRevised);
       ws.off("tool.calls.flush", onToolFlush);
       ws.off("confirm.request", onConfirmRequest);
       ws.off("confirm_prompt", onConfirmRequest);
