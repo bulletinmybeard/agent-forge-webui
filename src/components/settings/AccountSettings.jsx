@@ -119,7 +119,10 @@ export default function AccountSettings() {
         </div>
       </section>
 
-      <section className="settings-page__section account-block" aria-labelledby="settings-instructions">
+      <section
+        className="settings-page__section account-block"
+        aria-labelledby="settings-instructions"
+      >
         <h2 id="settings-instructions" className="settings-page__section-title">
           Model instructions
         </h2>

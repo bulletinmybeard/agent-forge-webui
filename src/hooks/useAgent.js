@@ -500,9 +500,7 @@ export const useAgent = () => {
         next[bufferIdx] = applyCommandRevision(next[bufferIdx], msg);
         toolBufferRef.current = next;
         if (liveTs) {
-          setMessages((prev) =>
-            prev.map((m) => (m._ts === liveTs ? { ...m, calls: next } : m)),
-          );
+          setMessages((prev) => prev.map((m) => (m._ts === liveTs ? { ...m, calls: next } : m)));
         }
         return;
       }
